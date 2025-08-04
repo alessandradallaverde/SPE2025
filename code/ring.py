@@ -1,8 +1,8 @@
 from numpy import random
-from msg import ringMsg
+from msg import RingMsg
 
 # this class represents a ring algorithm simulation
-class ringSimulation:
+class RingSimulation:
     
     def __init__(self, env, nodes, finish):
         self.nodes = nodes
@@ -27,7 +27,7 @@ class ringSimulation:
             initiator = self.nodes[random.randint(len(self.nodes))]
             
         # create the election message 
-        election_msg = ringMsg("ELECTION", -1)
+        election_msg = RingMsg("ELECTION", -1)
 
         # starts election
         yield initiator.queue.put(election_msg) 
