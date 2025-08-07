@@ -1,6 +1,6 @@
-from node import RingNode
-from ring import RingSimulation
-from bully import BullySimulation
+from node.ring_node import RingNode
+from election.ring import RingSimulation
+from election.bully import BullySimulation
 import simpy
 
 # ------------ RING ALGORITHM SIMULATION ------------

@@ -1,6 +1,6 @@
 from numpy import random
-from msg import BullyMsg
-from node import BullyNode
+from msg.bully_msg import BullyMsg
+from node.bully_node import BullyNode
 
 # this class represents a bully algorithm simulation
 class BullySimulation:

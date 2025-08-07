@@ -1,5 +1,5 @@
 from numpy import random
-from msg import RingMsg
+from msg.ring_msg import RingMsg
 
 # this class represents a ring algorithm simulation
 class RingSimulation:
