@@ -3,32 +3,21 @@ from election.ring import RingSimulation
 from election.bully import BullySimulation
 import simpy
 
-# ------------ RING ALGORITHM SIMULATION ------------
-
 # number of nodes in the system
 N_NODES = 5
 
-# create simpy environment
-env = simpy.Environment()
+# ------------ RING ALGORITHM SIMULATION ------------
 
-# process that runs both simulations
-def run_both_sim():
-    # create nodes with IDs i = 0, 1, 2, ...
-    ring_nodes = []
-    for i in range(N_NODES):
-        ring_nodes.append(RingNode(env,i))
+env_ring = simpy.Environment()
 
-    # pass the peers to the nodes
-    for i in range(N_NODES):
-        ring_nodes[i].obtain_peers(ring_nodes)
+ring = RingSimulation(env_ring, N_NODES, False, 0.15)
+env_ring.process(ring.start_election())
+env_ring.run()
 
-    # create simulation class
-    ring = RingSimulation(env, ring_nodes, False)
-    bully = BullySimulation(env, N_NODES)
-    # waut for one to end before starting the next
-    yield env.process(bully.start_election())
-    env.process(ring.start_election())
+# ------------ BULLY ALGORITHM SIMULATION -----------
 
-env.process(run_both_sim())
+env_bully = simpy.Environment()
 
-env.run()
+bully = BullySimulation(env_bully, N_NODES)
+env_bully.process(bully.start_election())
+env_bully.run()
