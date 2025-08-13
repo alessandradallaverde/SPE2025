@@ -1,6 +1,6 @@
 from numpy import random
 
-from msg.ring_msg import RingMsg
+from msg.ring_msg import ElectionRingMsg
 from node.ring_node import RingNode
 
 # this class represents a ring algorithm simulation
@@ -38,54 +38,55 @@ class RingSimulation:
         initiator.initiate()
             
         # create the election message 
-        election_msg = RingMsg("ELECTION", -1)
+        election_msg = ElectionRingMsg([])
 
         # starts election
         yield initiator.queue.put(election_msg) 
-        self.env.process(initiator.receive())
+        #self.env.process(initiator.receive())
+
+        # starts initiators 
+        self.env.process(self.insert_initiator())
 
         # starts crashes
         # self.env.process(self.insert_crash())
 
-        # starts initiators 
-        # self.env.process(self.insert_initiator())
-
     # method to insert a random initiator in the network 
-    # TODO: modify because an initiator can't exist if has received an election 
-    #       message
     def insert_initiator(self):
+
+        i = 0
     
-        while(True):
+        # while there may be nodes that can start a new election
+        while True:
 
-            yield self.env.timeout(self.delay_mean*3)
+            # wait
+            # TODO: decide how to set this timeout
+            yield self.env.timeout(self.delay_mean*2)
 
-            # choose an initiator
-            new_initiator = self.nodes[random.randint(len(self.nodes))]
-            # if the initiator is crashed or is already an initiator choose another one
-            while new_initiator.crashed or new_initiator.initiator:
-                new_initiator = self.nodes[random.randint(len(self.nodes))]
+            # find the node to initiate
+            while(i<len(self.nodes)):
 
-            new_initiator.initiate()
+                new_initiator = self.nodes[i]
 
-            # create the election message 
-            election_msg = RingMsg("ELECTION", -1)
+                if not(new_initiator.crashed or new_initiator.initiator or new_initiator.participant):
+                    new_initiator.initiate()
 
-            # starts election
-            yield new_initiator.queue.put(election_msg) 
-            self.env.process(new_initiator.receive())
-    
+                    # create the election message 
+                    election_msg = ElectionRingMsg([])
+
+                    # starts election
+                    yield new_initiator.queue.put(election_msg) 
+
+                    break;
+
+                i+=1
+
+            # there are no more nodes able to initiate the election algorithm
+            if i == len(self.nodes):
+                break
+
+            i=0
+
+
     # method to crash a random node
-    # TODO: testing because it has some problems
     def insert_crash(self):
-        # a node crashes 
-        while(self.crashes<len(self.nodes)-1):
-            
-            yield self.env.timeout(self.delay_mean*10)
-
-            crash_node = self.nodes[random.randint(len(self.nodes))]
-            # if the node is already crashed find another one
-            while crash_node.crashed:
-                crash_node = self.nodes[random.randint(len(self.nodes))]
-
-            crash_node.crash()
-            self.crashes +=1
+        pass

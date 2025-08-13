@@ -14,6 +14,10 @@ ring = RingSimulation(env_ring, N_NODES, False, 0.15)
 env_ring.process(ring.start_election())
 env_ring.run()
 
+# DEBUG
+print("\nRing election algorithm terminated")
+print("\n------------------------------------------------\n")
+
 # ------------ BULLY ALGORITHM SIMULATION -----------
 
 env_bully = simpy.Environment()

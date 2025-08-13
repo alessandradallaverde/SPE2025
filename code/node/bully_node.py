@@ -6,7 +6,6 @@ class BullyNode(Node):
 
     def __init__(self, env, id):
        super().__init__(env, id)
-       self.elected = -1
        self.is_waiting = False
        self.blocked = False
 

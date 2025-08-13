@@ -7,6 +7,7 @@ class Node:
         self.queue = Store(env)
         self.crashed = False
         self.env = env
+        self.elected = -1
 
     def obtain_peers(self, peers):
         self.peers = peers
