@@ -17,7 +17,7 @@ class BullySimulation:
             self.nodes[i].obtain_peers(self.nodes)
 
     # method to start an election
-    def start_election(self, n_initiators = 1):
+    def start_election(self, n_initiators = 1, loss_rate = 0):
         # reject operation if initiators are too many
         if n_initiators > (len(self.nodes) - 1):
             print("\031[1;94m------------------------------------------------\n")
@@ -27,6 +27,7 @@ class BullySimulation:
         # restore all nodes default status
         for i in range(len(self.nodes)):
             self.nodes[i].reset()
+            self.nodes[i].set_behaviour(loss_rate)
             
         self.finish_event = self.env.event()
         self.add_triggers()
@@ -51,7 +52,11 @@ class BullySimulation:
         election_msg = BullyMsg("ELECTION", -1)
         for i in range(n_initiators):
             yield initiators[i].queue.put(election_msg) 
-            self.env.process(initiators[i].receive())
+            if loss_rate == 0:
+                # reliable links
+                self.env.process(initiators[i].reliable_receive())
+            else:
+                self.env.process(initiators[i].unreliable_receive())
 
         # wait for finish_event to be triggered (means that election ended)
         yield self.finish_event

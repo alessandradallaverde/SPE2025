@@ -9,5 +9,5 @@
 ### TODO
 - [x] Modify ring algorithm to support multiple initiators (**done, miss testing**).
 - [x] Modify bully algorithm to support multiple initiators (**done, miss testing**).
-- [ ] Modify algorithms to tolerate packet loss (**violate reliable links requirement**).
+- [ ] Modify algorithms to tolerate packet loss (**bully done, further testing needed**).
 - [ ] (Optional) Test what happens when there are nodes with the same id (**violate node identifiability requirement**).

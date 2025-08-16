@@ -23,5 +23,5 @@ print("\n------------------------------------------------\n")
 env_bully = simpy.Environment()
 
 bully = BullySimulation(env_bully, N_NODES)
-env_bully.process(bully.start_election(3))
+env_bully.process(bully.start_election(2, 0.5))
 env_bully.run()
