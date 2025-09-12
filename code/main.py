@@ -1,4 +1,3 @@
-from node.ring_node import RingNode
 from election.ring import RingSimulation
 from election.bully import BullySimulation
 import simpy
@@ -10,7 +9,7 @@ N_NODES = 5
 
 env_ring = simpy.Environment()
 
-ring = RingSimulation(env_ring, N_NODES, False, 0.15)
+ring = RingSimulation(env_ring, N_NODES, False, 0.15, unreliable=True)
 env_ring.process(ring.start_election())
 env_ring.run()
 
