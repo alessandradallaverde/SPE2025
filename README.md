@@ -7,7 +7,7 @@
 - Basic ring and bully election simulation set to tolerate one initiator (the first node that detects coordinator crash) and network delays.
 
 ### TODO
-- [x] Modify ring algorithm to support multiple initiators (**done, miss testing**).
-- [x] Modify bully algorithm to support multiple initiators (**done, miss testing**).
-- [ ] Modify algorithms to tolerate packet loss (**bully done, further testing needed**).
+- [x] Modify algorithms to support multiple initiators (**further testing needed**).
+- [x] Modify algorithms to tolerate packet loss (**further testing needed**).
+- [ ] Modify ring algorithm to support multiple crashes with reliable links (**if possible**).
 - [ ] (Optional) Test what happens when there are nodes with the same id (**violate node identifiability requirement**).
