@@ -5,16 +5,14 @@ from msg.ring_msg import CoordinatorRingMsg, ElectionRingMsg, RingMsg
 
 import utils
 
-# Modify
-#   1. manage packet losses
-#   2. manage multiple crashes
-
 # this class represents a node in the ring algorithm execution
+#
 #   attributes:
 #       - initiator -> boolean value, if true the node is an initiator
 #       - delay_mean -> exponential mean for setting propagation delays
 #       - participant -> boolean value, if true the node is participating in the election (it received the election message)   
 #       - pending_ack -> list containing the messages for which the node is waiting an ack    
+#       - unreliable -> boolean value, if true we use replication to tolerate unreliable links
 class RingNode(Node):
 
     def __init__(self, env, id, delay_mean, unreliable):
@@ -52,13 +50,13 @@ class RingNode(Node):
             elif msg.type == "COORDINATOR":
                 print(f"Time {(self.env.now-delay):.2f}: Node {self.id} sends {msg.type} with ID {msg.elected} to node {next}")
 
-            if not self.unreliable: break   # if we have reliable links we do not need ack
+            if not self.unreliable: break   # if we have reliable links we do not need acks (replication)
 
             ack = RingMsg("ACK_"+msg.type, msg.transaction_id, next)
             self.pending_ack.append(ack)
 
             # TODO: decide how to set this timeout
-            yield self.env.timeout(self.delay_mean*5)       # wait for the ACK
+            yield self.env.timeout(self.delay_mean)       # wait for the ACK
 
             if ack in self.pending_ack:     
                 # DEBUG
@@ -83,8 +81,8 @@ class RingNode(Node):
         while not self.crashed:
             msg = yield self.queue.get()        # the get waits until there is something in the store
 
-            if self.unreliable and random.uniform(0,1) > 0.8 and msg.sender!=-1:  
-                continue      # unreliable links
+            if self.unreliable and random.uniform(0,1) > 0.8 and msg.sender!=-1:    # unreliable links
+                continue      
 
             # DEBUG
             print(f"Time {self.env.now:.2f}: Node {self.id} receives {msg.type} from node {msg.sender}")
@@ -103,11 +101,14 @@ class RingNode(Node):
                     self.env.process(self.send_ack(RingMsg("ACK_ELECTION",msg.transaction_id,self.id), msg.sender))
 
             elif msg.type == "COORDINATOR":
+
+                if self.unreliable: self.env.process(self.send_ack(RingMsg("ACK_COORDINATOR", msg.transaction_id, self.id) , msg.sender))
+
                 if self.id != msg.initiator:
                     self.elected = msg.elected
                     self.env.process(self.send(CoordinatorRingMsg(msg.transaction_id, self.id, msg.initiator, msg.elected)))
-
-                if self.unreliable: self.env.process(self.send_ack(RingMsg("ACK_COORDINATOR", msg.transaction_id, self.id) , msg.sender))
+                else:
+                    self.finish.succeed()       # we finish the simulation when a coordinator cycle is completed
 
             elif "ACK" in msg.type and msg in self.pending_ack: 
                 self.pending_ack.remove(msg)

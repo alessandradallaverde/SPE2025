@@ -9,13 +9,9 @@ N_NODES = 5
 
 env_ring = simpy.Environment()
 
-ring = RingSimulation(env_ring, N_NODES, False, 0.15, unreliable=True)
+ring = RingSimulation(env_ring, N_NODES, 0.15, unreliable=True)
 env_ring.process(ring.start_election())
 env_ring.run()
-
-# DEBUG
-print("\nRing election algorithm terminated")
-print("\n------------------------------------------------\n")
 
 # ------------ BULLY ALGORITHM SIMULATION -----------
 

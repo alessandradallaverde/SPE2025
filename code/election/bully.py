@@ -1,14 +1,16 @@
 from numpy import random
+
 from msg.bully_msg import BullyMsg
 from node.bully_node import BullyNode
+from election.simulation import Simulation
 
 # this class represents a bully algorithm simulation
-class BullySimulation:
+class BullySimulation(Simulation):
     
     def __init__(self, env, n_nodes):
-        self.env = env
 
-        self.nodes = []
+        super().__init__(env)
+
         for i in range(n_nodes):
             self.nodes.append(BullyNode(env, i))
 
@@ -62,8 +64,3 @@ class BullySimulation:
         yield self.finish_event
         print("\n\033[1;94mBully election algorithm terminated")
         print("\n------------------------------------------------\033[0m\n")
-
-    def add_triggers(self):
-        for i in range(len(self.nodes)):
-            # add reference to 'finish_event' so that nodes can trigger it
-            self.nodes[i].finish = self.finish_event

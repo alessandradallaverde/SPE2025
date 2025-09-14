@@ -9,5 +9,5 @@
 ### TODO
 - [x] Modify algorithms to support multiple initiators (**further testing needed**).
 - [x] Modify algorithms to tolerate packet loss (**further testing needed**).
-- [ ] Modify ring algorithm to support multiple crashes with reliable links (**if possible**).
+- [ ] (Optional) Modify ring algorithm to support multiple crashes with reliable links (**if possible**).
 - [ ] (Optional) Test what happens when there are nodes with the same id (**violate node identifiability requirement**).
