@@ -15,13 +15,12 @@ from election.simulation import Simulation
 class RingSimulation(Simulation):
     
     def __init__(self, env, n_nodes, delay_mean, n_initiators = 1, unreliable = False):
-        super().__init__(env, n_nodes)
-        self.delay_mean = delay_mean
+        super().__init__(env, n_nodes, delay_mean)
         self.n_initiators = n_initiators
         self.unreliable = unreliable
 
         for i in range(n_nodes):        # create nodes with IDs i = 0, 1, 2, ...
-            self.nodes.append(RingNode(env, i, self.delay_mean, self.unreliable))
+            self.nodes.append(RingNode(env, i, delay_mean, self.unreliable))
 
         for i in range(n_nodes):        # pass the peers to the nodes
             self.nodes[i].obtain_peers(self.nodes)
@@ -66,7 +65,7 @@ class RingSimulation(Simulation):
 
         for i in range(self.n_nodes):
             self.nodes.append(RingNode(env, i, self.delay_mean, self.unreliable))
-
+            
         # pass the peers to the nodes
         for i in range(self.n_nodes):
             self.nodes[i].obtain_peers(self.nodes)

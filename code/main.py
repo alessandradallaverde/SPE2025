@@ -15,7 +15,7 @@ stats_ring = SimStats(1, 0.15, N_NODES)
 
 n_sim = 3
 i = 0
-
+'''
 while i<n_sim:
     env_ring.process(ring.start_election())
     env_ring.run()
@@ -26,16 +26,14 @@ while i<n_sim:
     ring.clean(env_ring)
 
     i+=1
-
+'''
 # DEBUG
 print(stats_ring.get_t_times())
 
 # ------------ BULLY ALGORITHM SIMULATION -----------
 
-'''
-env_bully = simpy.Environment()
-
-bully = BullySimulation(env_bully, N_NODES)
-env_bully.process(bully.start_election(2, 0.5))
-env_bully.run()
-'''
+for i in range (100):
+    env_bully = simpy.Environment()
+    bully = BullySimulation(env_bully, N_NODES, 0.15)
+    env_bully.process(bully.start_election(2))
+    env_bully.run()

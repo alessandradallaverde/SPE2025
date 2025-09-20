@@ -7,12 +7,12 @@ from election.simulation import Simulation
 # this class represents a bully algorithm simulation
 class BullySimulation(Simulation):
     
-    def __init__(self, env, n_nodes):
+    def __init__(self, env, n_nodes, delay_mean):
 
-        super().__init__(env, n_nodes)
+        super().__init__(env, n_nodes, delay_mean)
 
         for i in range(n_nodes):
-            self.nodes.append(BullyNode(env, i))
+            self.nodes.append(BullyNode(env, i, delay_mean))
 
         # pass the peers to the nodes
         for i in range(n_nodes):

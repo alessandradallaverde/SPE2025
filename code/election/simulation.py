@@ -6,12 +6,13 @@
 #   - finish_event -> simpy event triggered when a coordinator is elected
 class Simulation:
 
-    def __init__(self, env, n_nodes):
+    def __init__(self, env, n_nodes, delay_mean):
         self.env = env
         self.nodes = []
         self.finish_event = self.env.event()
         self.t_time = 0
-        self.n_nodes=n_nodes
+        self.n_nodes = n_nodes
+        self.delay_mean = delay_mean
 
     # method to add triggers to the nodes
     def add_triggers(self):
