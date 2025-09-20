@@ -9,7 +9,7 @@ class BullySimulation(Simulation):
     
     def __init__(self, env, n_nodes):
 
-        super().__init__(env)
+        super().__init__(env, n_nodes)
 
         for i in range(n_nodes):
             self.nodes.append(BullyNode(env, i))
@@ -62,5 +62,18 @@ class BullySimulation(Simulation):
 
         # wait for finish_event to be triggered (means that election ended)
         yield self.finish_event
+
+        self.t_time = self.env.now
+        # DEBUG
         print("\n\033[1;94mBully election algorithm terminated")
         print("\n------------------------------------------------\033[0m\n")
+
+        def clean(self, env):
+            super().clean(env)
+
+            for i in range(self.n_nodes):
+                self.nodes.append(BullyNode(env, i))
+
+            # pass the peers to the nodes
+            for i in range(self.n_nodes):
+                self.nodes[i].obtain_peers(self.nodes)

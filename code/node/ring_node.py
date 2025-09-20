@@ -30,7 +30,7 @@ class RingNode(Node):
         self.initiator = True
 
         # DEBUG
-        print(f"Time {self.env.now:.2f}: Node {self.id} initiates an election")
+        # print(f"Time {self.env.now:.2f}: Node {self.id} initiates an election")
 
     # this method send an election or a coordinator message to its next active neighbor
     def send(self, msg):
@@ -45,10 +45,10 @@ class RingNode(Node):
             yield self.peers[next].queue.put(msg)       # send the message 
 
             # DEBUG
-            if msg.type == "ELECTION":
-                print(f"Time {(self.env.now-delay):.2f}: Node {self.id} sends {msg.type} with IDs {msg.ids} to node {next}")
-            elif msg.type == "COORDINATOR":
-                print(f"Time {(self.env.now-delay):.2f}: Node {self.id} sends {msg.type} with ID {msg.elected} to node {next}")
+            # if msg.type == "ELECTION":
+            #     print(f"Time {(self.env.now-delay):.2f}: Node {self.id} sends {msg.type} with IDs {msg.ids} to node {next}")
+            # elif msg.type == "COORDINATOR":
+            #     print(f"Time {(self.env.now-delay):.2f}: Node {self.id} sends {msg.type} with ID {msg.elected} to node {next}")
 
             if not self.unreliable: break   # if we have reliable links we do not need acks (replication)
 
@@ -60,7 +60,7 @@ class RingNode(Node):
 
             if ack in self.pending_ack:     
                 # DEBUG
-                print(f"Time {(self.env.now-delay):.2f}: Node {self.id} didn't received ACK from {next}, resend message")
+                #print(f"Time {(self.env.now-delay):.2f}: Node {self.id} didn't received ACK from {next}, resend message")
                 self.pending_ack.remove(ack)
             else:
                 break
@@ -70,7 +70,7 @@ class RingNode(Node):
     def send_ack(self, msg, receiver):
 
         # DEBUG 
-        print(f"Time {self.env.now:.2f}: Node {self.id} sends {msg.type} to node {receiver}")
+        # print(f"Time {self.env.now:.2f}: Node {self.id} sends {msg.type} to node {receiver}")
         
         yield self.env.timeout(utils.delay(self.delay_mean))
         yield self.peers[receiver].queue.put(msg)       # send the ack
@@ -85,7 +85,7 @@ class RingNode(Node):
                 continue      
 
             # DEBUG
-            print(f"Time {self.env.now:.2f}: Node {self.id} receives {msg.type} from node {msg.sender}")
+            # print(f"Time {self.env.now:.2f}: Node {self.id} receives {msg.type} from node {msg.sender}")
 
             if msg.type == "ELECTION":
                 if self.id in msg.ids:      # the election message performed a cycle

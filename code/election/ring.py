@@ -15,7 +15,7 @@ from election.simulation import Simulation
 class RingSimulation(Simulation):
     
     def __init__(self, env, n_nodes, delay_mean, n_initiators = 1, unreliable = False):
-        super().__init__(env)
+        super().__init__(env, n_nodes)
         self.delay_mean = delay_mean
         self.n_initiators = n_initiators
         self.unreliable = unreliable
@@ -53,8 +53,22 @@ class RingSimulation(Simulation):
          
         yield self.finish_event     # wait for finish_event to be triggered
 
+        self.t_time = self.env.now
+
         # DEBUG
-        print("\nRing election algorithm terminated")
-        print("\n------------------------------------------------\n")
+        # print("\nRing election algorithm terminated")
+        # print("\n------------------------------------------------\n")
 
         raise simpy.core.StopSimulation("Election finished")        # stop all processes
+
+    def clean(self, env):
+        super().clean(env)
+
+        for i in range(self.n_nodes):
+            self.nodes.append(RingNode(env, i, self.delay_mean, self.unreliable))
+
+        # pass the peers to the nodes
+        for i in range(self.n_nodes):
+            self.nodes[i].obtain_peers(self.nodes)
+
+        self.add_triggers()
