@@ -3,9 +3,14 @@ from numpy import random
 from msg.bully_msg import BullyMsg
 from node.bully_node import BullyNode
 from election.simulation import Simulation
-import simpy
 
 # this class represents a bully algorithm simulation
+# parameters:
+# - env         ->  simulation environments
+# - n_nodes     ->  number of nodes 
+# - delay_mean  ->  mean of exponential delays
+# - delay_q     ->  quantile to determine max delay considered by the system
+# - sim_stats   ->  reference to the statistics class to record stats during simulations
 class BullySimulation(Simulation):
     
     def __init__(self, env, n_nodes, delay_mean, delay_q, sim_stats):
@@ -20,7 +25,7 @@ class BullySimulation(Simulation):
         for i in range(n_nodes):
             self.nodes[i].obtain_peers(self.nodes)
 
-    # method to start an election (need a rederence to the sim stats to record measures)
+    # method to start an election
     def start_election(self, n_initiators = 1, loss_rate = 0, debug_mode = False):
         # reject operation if initiators are too many
         if n_initiators > (len(self.nodes) - 1):
@@ -72,13 +77,17 @@ class BullySimulation(Simulation):
         if debug_mode:
             print("\n\033[1;94mBully election algorithm terminated")
             print("\n------------------------------------------------\033[0m\n")
-
+    '''
     def clean(self, env):
+        # reset nodes, env and t_time
         super().clean(env)
 
+        self.n_nodes = n_nodes
+        self.delay_mean = delay_mean
         for i in range(self.n_nodes):
             self.nodes.append(BullyNode(env, i))
 
         # pass the peers to the nodes
         for i in range(self.n_nodes):
             self.nodes[i].obtain_peers(self.nodes)
+    '''

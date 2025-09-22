@@ -29,5 +29,5 @@ class Simulation:
     def clean(self, env):
         self.env = env
         self.nodes = []
-        self.finish_event = self.env.event()
+        #self.finish_event = self.env.event() for Bully each time an election is started the finish event is already dealt with
         self.t_time = 0
