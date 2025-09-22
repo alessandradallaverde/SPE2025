@@ -7,7 +7,10 @@
 #       n_nodes - number of nodes in the net
 #       timeout - timeout for messages under unreliable links condition
 #       loss_rate - prob. that a message isn't received under unreliable links condition
-#       t_times - list containing turnaround time for each identical simulation
+#       rtt_times - list containing turnaround time for each identical simulation
+#       runtimes - list containing runtime for each simulation
+import math
+from numpy import random 
 class SimStats:
     def __init__(self, initiators, delay, n_nodes, timeout=-1, loss_rate=-1):
         self.initiators = initiators
@@ -16,25 +19,65 @@ class SimStats:
         self.timeout = timeout
         self.loss_rate = loss_rate
 
-        self.t_times = []
+        self.rtt_times = []
+        self.runtimes = []
 
     def add_turnaround_time(self, t_time):
-        self.t_times.append(t_time)
+        self.rtt_times.append(t_time)
 
-    def get_t_times(self):
-        return self.t_times
+    def add_runtime(self, t_time):
+        self.runtimes.append(t_time)
+
+    def get_rtt_times(self):
+        return self.rtt_times
+    
+    def get_runtimes(self):
+        return self.runtimes
 
     # TODO
     def compute_ci(self):
         pass
 
-    # TODO
-    def compute_mean(self):
-        pass
+    # computes mean of one of the statistics list
+    def compute_mean(self, stats):
+        mean = 0
+        for el in stats:
+            mean += el
 
-    # TODO
-    def compute_var(self):
-        pass
+        return (mean/len(stats))
+
+
+    # works similarly to the compute_mean() function, but measuring variance
+    def compute_var(self, mean, stats):
+        var = 0
+        for el in stats:
+            var += ((el - mean)**2)
+
+        return (var/len(stats))
+    
+    # method to compute bootstrap ci
+    # parameters:
+    # ci_level          ->  confidence level
+    # stat_function     ->  reference to the function that can compute the needed statistic (mean, variance, ect.)
+    # stats             ->  list of data
+    def bootstrap_stats(self, ci_level, stat_function, stats):
+        
+        r0 = math.floor(((1 - ci_level) * len(stats)) / 2)
+        R = math.ceil(2 * r0 / (1 - ci_level)) - 1
+        boot_stat = []
+        for i in range(R):
+            # draw n & compute stats
+            draw = []
+            for j in range(len(stats)):
+                index = random.randint(0, len(stats))
+                draw.append(stats[index])
+            
+            boot_stat.append(stat_function(draw))
+        # sort
+        boot_stat.sort()
+        return (boot_stat[r0], boot_stat[R + 1 -r0])
+
+
 
 # this class represents the statistics result of different simulation with 
 # different factors, it is used to create plots/further analysis and to 

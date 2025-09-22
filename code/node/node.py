@@ -24,6 +24,7 @@ class Node:
     # method to crash the node
     def crash(self):
         self.crashed = True
-
+        '''
         # DEBUG
         print(f"Time {self.env.now:.2f}: Node {self.id} crashes")
+        '''

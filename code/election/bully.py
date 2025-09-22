@@ -3,23 +3,25 @@ from numpy import random
 from msg.bully_msg import BullyMsg
 from node.bully_node import BullyNode
 from election.simulation import Simulation
+import simpy
 
 # this class represents a bully algorithm simulation
 class BullySimulation(Simulation):
     
-    def __init__(self, env, n_nodes, delay_mean):
+    def __init__(self, env, n_nodes, delay_mean, delay_q, sim_stats):
 
         super().__init__(env, n_nodes, delay_mean)
+        self.sim_stats = sim_stats
 
         for i in range(n_nodes):
-            self.nodes.append(BullyNode(env, i, delay_mean))
+            self.nodes.append(BullyNode(env, i, sim_stats, delay_mean, delay_q))
 
         # pass the peers to the nodes
         for i in range(n_nodes):
             self.nodes[i].obtain_peers(self.nodes)
 
-    # method to start an election
-    def start_election(self, n_initiators = 1, loss_rate = 0):
+    # method to start an election (need a rederence to the sim stats to record measures)
+    def start_election(self, n_initiators = 1, loss_rate = 0, debug_mode = False):
         # reject operation if initiators are too many
         if n_initiators > (len(self.nodes) - 1):
             print("\031[1;94m------------------------------------------------\n")
@@ -28,14 +30,15 @@ class BullySimulation(Simulation):
 
         # restore all nodes default status
         for i in range(len(self.nodes)):
-            self.nodes[i].reset()
-            self.nodes[i].set_behaviour(loss_rate)
+            self.nodes[i].reset(self.env)
+            self.nodes[i].set_behaviour(loss_rate, debug_mode)
             
         self.finish_event = self.env.event()
         self.add_triggers()
 
-        print("\033[1;94m------------------------------------------------\n")
-        print("Start Bully election algorithm\033[0m\n")
+        if debug_mode:
+            print("\033[1;94m------------------------------------------------\n")
+            print("Start Bully election algorithm\033[0m\n")
         
         # coordinator (crashed)
         self.nodes[len(self.nodes)-1].crash()
@@ -62,18 +65,20 @@ class BullySimulation(Simulation):
 
         # wait for finish_event to be triggered (means that election ended)
         yield self.finish_event
-
         self.t_time = self.env.now
-        # DEBUG
-        print("\n\033[1;94mBully election algorithm terminated")
-        print("\n------------------------------------------------\033[0m\n")
+        # stat counter
+        self.sim_stats.add_runtime(self.env.now)
+        
+        if debug_mode:
+            print("\n\033[1;94mBully election algorithm terminated")
+            print("\n------------------------------------------------\033[0m\n")
 
-        def clean(self, env):
-            super().clean(env)
+    def clean(self, env):
+        super().clean(env)
 
-            for i in range(self.n_nodes):
-                self.nodes.append(BullyNode(env, i))
+        for i in range(self.n_nodes):
+            self.nodes.append(BullyNode(env, i))
 
-            # pass the peers to the nodes
-            for i in range(self.n_nodes):
-                self.nodes[i].obtain_peers(self.nodes)
+        # pass the peers to the nodes
+        for i in range(self.n_nodes):
+            self.nodes[i].obtain_peers(self.nodes)

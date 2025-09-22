@@ -14,10 +14,11 @@ from election.simulation import Simulation
 #       - nodes -> nodes of the network
 class RingSimulation(Simulation):
     
-    def __init__(self, env, n_nodes, delay_mean, n_initiators = 1, unreliable = False):
+    def __init__(self, env, n_nodes, delay_mean, sim_stats, n_initiators = 1, unreliable = False):
         super().__init__(env, n_nodes, delay_mean)
         self.n_initiators = n_initiators
         self.unreliable = unreliable
+        self.sim_stats = sim_stats
 
         for i in range(n_nodes):        # create nodes with IDs i = 0, 1, 2, ...
             self.nodes.append(RingNode(env, i, delay_mean, self.unreliable))
@@ -53,6 +54,8 @@ class RingSimulation(Simulation):
         yield self.finish_event     # wait for finish_event to be triggered
 
         self.t_time = self.env.now
+        # store in stats
+        self.sim_stats.add_runtime(self.env.now)
 
         # DEBUG
         # print("\nRing election algorithm terminated")
