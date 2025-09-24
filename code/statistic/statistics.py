@@ -1,3 +1,7 @@
+import math
+from numpy import random 
+import matplotlib.pyplot as plt
+
 # this class represents the statistics for multiple simulations of an election
 # algorithm with the same factors
 #
@@ -9,8 +13,6 @@
 #       loss_rate - prob. that a message isn't received under unreliable links condition
 #       rtt_times - list containing turnaround time for each identical simulation
 #       runtimes - list containing runtime for each simulation
-import math
-from numpy import random 
 class SimStats:
     def __init__(self, initiators, delay, n_nodes, timeout=-1, loss_rate=-1):
         self.initiators = initiators
@@ -19,24 +21,14 @@ class SimStats:
         self.timeout = timeout
         self.loss_rate = loss_rate
 
-        self.rtt_times = []
         self.runtimes = []
-
-    def add_turnaround_time(self, t_time):
-        self.rtt_times.append(t_time)
 
     def add_runtime(self, t_time):
         self.runtimes.append(t_time)
 
-    def get_rtt_times(self):
-        return self.rtt_times
     
     def get_runtimes(self):
         return self.runtimes
-
-    # TODO
-    def compute_ci(self):
-        pass
 
     # computes mean of one of the statistics list
     def compute_mean(self, stats):
@@ -46,7 +38,6 @@ class SimStats:
 
         return (mean/len(stats))
 
-
     # works similarly to the compute_mean() function, but measuring variance
     def compute_var(self, mean, stats):
         var = 0
@@ -54,7 +45,28 @@ class SimStats:
             var += ((el - mean)**2)
 
         return (var/len(stats))
-    
+
+    # method to compute asymptotic CI 95% confidence
+    def compute_ci(self):
+        mean = self.compute_mean(self.runtimes)
+        var = self.compute_var(mean, self.runtimes)
+        err = 1.96 * math.sqrt(var / self.n_nodes)
+
+        return err
+
+    def plot_runtimes_hist(self, bins):
+        plt.figure()
+        plt.hist(self.runtimes, bins=bins, label = "Simulations with reliable links" )
+        plt.xlim()
+        plt.xlabel("Runtime in ms")
+        plt.legend()
+
+    def plot_runtimes_box_plot(self):
+        plt.figure()
+        plt.boxplot(self.runtimes)
+        plt.title("Box Plot")
+        plt.ylabel("Turnaround Times")
+
     # method to compute bootstrap ci
     # parameters:
     # ci_level          ->  confidence level
@@ -78,7 +90,6 @@ class SimStats:
         return (boot_stat[r0], boot_stat[R + 1 -r0])
 
 
-
 # this class represents the statistics result of different simulation with 
 # different factors, it is used to create plots/further analysis and to 
 # analyze factors
@@ -91,3 +102,4 @@ class StatsManager:
 
     def insert_stat(self, sim_stat):
         self.stats.append(sim_stat)
+

@@ -31,8 +31,9 @@ class RingSimulation(Simulation):
     # method to start an election; starting conditions: coordinator crashed and n initiators
     def start_election(self):
 
-        print("------------------------------------------------\n")
-        print(f"Time {self.env.now:.2f}: Start Ring election algorithm\n")
+        # DEBUG
+        # print("------------------------------------------------\n")
+        # print(f"Time {self.env.now:.2f}: Start Ring election algorithm\n")
 
         self.nodes[len(self.nodes)-1].crash()       # the coordinator crashes (it is the one with the bigger ID)
 
@@ -53,7 +54,6 @@ class RingSimulation(Simulation):
          
         yield self.finish_event     # wait for finish_event to be triggered
 
-        self.t_time = self.env.now
         # store in stats
         self.sim_stats.add_runtime(self.env.now)
 
@@ -65,6 +65,7 @@ class RingSimulation(Simulation):
 
     def clean(self, env):
         super().clean(env)
+        self.finish_event = self.env.event()
 
         for i in range(self.n_nodes):
             self.nodes.append(RingNode(env, i, self.delay_mean, self.unreliable))
