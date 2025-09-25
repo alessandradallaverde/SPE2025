@@ -1,6 +1,8 @@
 import math
 from numpy import random 
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.stats as st
 
 # this class represents the statistics for multiple simulations of an election
 # algorithm with the same factors
@@ -37,7 +39,7 @@ class SimStats:
             f"{self.name} Algorithm:\n"
             f"- Simulations: {len(self.runtimes)}\n"
             f"- Parameters: N = {self.n_nodes}, init = {self.initiators}, mean delay = {self.delay:.2f}\n"
-            f"- Turnaround time mean: {self.mean:.2f} \u00B1 {self.err:.2f} ms"
+            f"- Turnaround time mean: {self.mean:.2f} \u00B1 {self.err:.2f} ms\n"
             f"- Turnaround time var: {self.var:.2f}"
         )
 
@@ -70,7 +72,7 @@ class SimStats:
         for el in self.runtimes:
             self.var += ((el - self.mean)**2)
 
-        self.var = self.var/len(self.runtimes)
+        self.var = self.var/(len(self.runtimes)-1)
 
     # method to compute asymptotic CI 95% confidence
     def compute_ci(self):
@@ -81,7 +83,20 @@ class SimStats:
     #       bins - bins of the histogram
     def plot_runtimes_hist(self, bins):
         plt.figure()
-        plt.hist(self.runtimes, bins=bins, label = "Simulations with reliable links" )
+        plt.hist(self.runtimes, bins=bins, label = "Simulations with reliable links")
+        plt.xlim()
+        plt.xlabel("Runtime in ms")
+        plt.legend()
+
+    def plot_ring_distribution(self, bins):
+        plt.figure()
+        plt.hist(self.runtimes, bins=bins, label = "Simulations with reliable links", density = True)
+
+        a, loc, scale = st.gamma.fit(self.runtimes, floc=0)
+        x = np.linspace(min(self.runtimes), max(self.runtimes), bins)
+        y = st.gamma.pdf(x, a, loc = loc, scale=scale)
+        plt.plot(x,y, color="red")
+
         plt.xlim()
         plt.xlabel("Runtime in ms")
         plt.legend()
@@ -138,3 +153,15 @@ class StatsManager:
         plt.boxplot([self.stats[id1].runtimes, self.stats[id2].runtimes], labels=labels)
         plt.title("Box Plot")
         plt.ylabel("Turnaround Times")
+
+    def cmp_runtimes(self, ids, bins):
+
+        plt.figure()
+
+        for i in ids:
+            counts, bin_edges = np.histogram(self.stats[i].runtimes, bins=bins, density=False)
+            bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+            color = (random.random(), random.random(), random.random())
+            plt.plot(bin_centers, counts, "--", color=color, label="Histogram curve")
+
+        plt.xlim()
