@@ -11,49 +11,74 @@ import matplotlib.pyplot as plt
 #       n_nodes - number of nodes in the net
 #       timeout - timeout for messages under unreliable links condition
 #       loss_rate - prob. that a message isn't received under unreliable links condition
-#       rtt_times - list containing turnaround time for each identical simulation
-#       runtimes - list containing runtime for each simulation
+#       name - name of the simulation
+#       id - id of the simulation
+#       runtimes - list containing runtime/turnaround time for each simulation
+#       mean - mean of the runtimes
+#       var - var of the runtimes
+#       err - err of the runtimes
 class SimStats:
-    def __init__(self, initiators, delay, n_nodes, timeout=-1, loss_rate=-1):
+    def __init__(self, initiators, delay, n_nodes, name, timeout=-1, loss_rate=-1):
         self.initiators = initiators
         self.delay = delay
         self.n_nodes = n_nodes
         self.timeout = timeout
         self.loss_rate = loss_rate
+        self.name = name
 
         self.runtimes = []
+        self.id = -1
+        self.mean = 0
+        self.var = 0
+        self.err = 0
 
+    def __str__(self):
+        return (
+            f"{self.name} Algorithm:\n"
+            f"- Simulations: {len(self.runtimes)}\n"
+            f"- Parameters: N = {self.n_nodes}, init = {self.initiators}, mean delay = {self.delay:.2f}\n"
+            f"- Turnaround time mean: {self.mean:.2f} \u00B1 {self.err:.2f} ms"
+            f"- Turnaround time var: {self.var:.2f}"
+        )
+
+    # method to set the id to the simulation (it will be the index of the stats 
+    # list of class StatsManager
+    def set_id(self, id):
+        self.id = id
+
+    # add the turnaround time to the list
+    #   params:
+    #       t_time - runtime to add
     def add_runtime(self, t_time):
         self.runtimes.append(t_time)
 
-    
+    # return the list of runtimes
     def get_runtimes(self):
         return self.runtimes
 
-    # computes mean of one of the statistics list
-    def compute_mean(self, stats):
-        mean = 0
-        for el in stats:
-            mean += el
+    # computes mean of the runtimes
+    def compute_mean(self):
+        self.mean = 0
+        for el in self.runtimes:
+            self.mean += el
 
-        return (mean/len(stats))
+        self.mean = self.mean/len(self.runtimes)
 
-    # works similarly to the compute_mean() function, but measuring variance
-    def compute_var(self, mean, stats):
-        var = 0
-        for el in stats:
-            var += ((el - mean)**2)
+    # compute variance of the runtimes
+    def compute_var(self):
+        self.var = 0
+        for el in self.runtimes:
+            self.var += ((el - self.mean)**2)
 
-        return (var/len(stats))
+        self.var = self.var/len(self.runtimes)
 
     # method to compute asymptotic CI 95% confidence
     def compute_ci(self):
-        mean = self.compute_mean(self.runtimes)
-        var = self.compute_var(mean, self.runtimes)
-        err = 1.96 * math.sqrt(var / self.n_nodes)
+        self.err = 1.96 * math.sqrt(self.var / self.n_nodes)
 
-        return err
-
+    # method to plot the histogram of the simulation runtimes
+    #   params:
+    #       bins - bins of the histogram
     def plot_runtimes_hist(self, bins):
         plt.figure()
         plt.hist(self.runtimes, bins=bins, label = "Simulations with reliable links" )
@@ -61,6 +86,7 @@ class SimStats:
         plt.xlabel("Runtime in ms")
         plt.legend()
 
+    # method to plot the boxplot of the simulation runtimes
     def plot_runtimes_box_plot(self):
         plt.figure()
         plt.boxplot(self.runtimes)
@@ -89,7 +115,6 @@ class SimStats:
         boot_stat.sort()
         return (boot_stat[r0], boot_stat[R + 1 -r0])
 
-
 # this class represents the statistics result of different simulation with 
 # different factors, it is used to create plots/further analysis and to 
 # analyze factors
@@ -103,3 +128,13 @@ class StatsManager:
     def insert_stat(self, sim_stat):
         self.stats.append(sim_stat)
 
+    # method to analyze two different simulations' box plots
+    #   params:
+    #       id1 - index of the first simulation in the stats list
+    #       id2 - index of the second simulation in the stats list
+    def cmp_runtimes_box_plot(self, id1, id2):
+        plt.figure()
+        labels=[self.stats[id1].name, self.stats[id2].name]
+        plt.boxplot([self.stats[id1].runtimes, self.stats[id2].runtimes], labels=labels)
+        plt.title("Box Plot")
+        plt.ylabel("Turnaround Times")
