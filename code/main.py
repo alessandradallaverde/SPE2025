@@ -8,20 +8,21 @@ import math
 import matplotlib.pyplot as plt
 
 # ------------------- SETTINGS ---------------------
-n_nodes = 5
-delay_mean = 110
+n_nodes = 4
+delay = 110
 initiators = 1
 n_sim = 10000
+loss = 0.8
 
 sim_manager = StatsManager()
 
 # ------------ RING ALGORITHM SIMULATION ------------
-stats_ring = SimStats(initiators, delay_mean, n_nodes, "Ring")
+stats_ring = SimStats(initiators, delay, n_nodes, "Ring")
 stats_ring.set_id(len(sim_manager.stats))
 sim_manager.insert_stat(stats_ring)
 env_ring = simpy.Environment()
-ring = RingSimulation(env_ring, n_nodes, delay_mean, stats_ring)          # reliable links
-# ring = RingSimulation(env_ring, n_nodes, delay_mean, stats_ring, unreliable=True, loss=0.8, timeout=delay_mean, debug_mode=True)
+ring = RingSimulation(env_ring, n_nodes, delay, stats_ring)          # reliable links
+# ring = RingSimulation(env_ring, n_nodes, delay, stats_ring, n_initiators=initiators,unreliable=True, loss=0.8, timeout=delay)
 
 for i in range(n_sim):
     env_ring.process(ring.start_election())
@@ -34,20 +35,21 @@ stats_ring.compute_var()
 stats_ring.compute_ci()
 
 # ANALYZE TURNAROUND TIME
-# stats_ring.plot_runtimes_hist(200)     
-# stats_ring.plot_runtimes_box_plot()
+stats_ring.plot_runtimes_hist(200)     
+stats_ring.plot_runtimes_box_plot()
 
 print(stats_ring)
 
 # ------------ BULLY ALGORITHM SIMULATION -----------
-stats_bully = SimStats(initiators, delay_mean, n_nodes, "Bully")
+stats_bully = SimStats(initiators, delay, n_nodes, "Bully")
 stats_bully.set_id(len(sim_manager.stats))
 sim_manager.insert_stat(stats_bully)
 env_bully = simpy.Environment()
-bully = BullySimulation(env_bully, n_nodes, delay_mean, 0.8, stats_bully)
+bully = BullySimulation(env_bully, n_nodes, delay, 0.8, stats_bully)
 
 for i in range (n_sim):
-    bully.env.process(bully.start_election(initiators))
+    #bully.env.process(bully.start_election(initiators))         #reliable
+    bully.env.process(bully.start_election(initiators, loss_rate=loss))         #unreliable
     bully.env.run()
     env_bully = simpy.Environment()
     bully.env = env_bully
@@ -77,7 +79,6 @@ sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
 #       bully - boolean value, if true the simulations will be the one of the bully
 #       unreliable - boolean value, if true we are under the unreliable links assumption
 # TODO: manage unreliable links
-# TODO: add n_timeout
 # TODO: add n_loss_rate
 def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, bully, unreliable):
     ids = []
@@ -124,14 +125,15 @@ factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, bully=True, unreliable=F
 # ------------ SHOW PLOTS ----------------
 plt.show()
 
+
 '''
 # 3. Analyze loss rates related to runtime
 # helper function to not repeat code for runtime mean analysis 
 def analyze_mean(loss_rate, sim_manager):
-    stats_bully = SimStats(initiators, delay_mean, n_nodes)
+    stats_bully = SimStats(initiators, delay, n_nodes)
     sim_manager.insert_stat(stats_bully)
     env_bully = simpy.Environment()
-    bully = BullySimulation(env_bully, n_nodes, delay_mean, 0.8, stats_bully)
+    bully = BullySimulation(env_bully, n_nodes, delay, 0.8, stats_bully)
 
     for i in range (n_sim):
         bully.env.process(bully.start_election(initiators, loss_rate ))

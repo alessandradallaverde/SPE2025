@@ -26,12 +26,16 @@ class RingNode(Node):
        self.debug_mode=debug_mode
        self.loss=loss
        self.timeout=timeout
+       self.crashed=False
+       self.initiator=False
        
        self.env.process(self.receive())     # the node can receive and manage messages
 
     # this method set the initiator parameter to true
     def initiate(self):
 
+        self.initiator=True
+        
         if self.debug_mode:
             print(f"Time {self.env.now:.2f}: Node {self.id} initiates an election")
 
@@ -103,9 +107,8 @@ class RingNode(Node):
 
             elif msg.type == "COORDINATOR":
 
-                if self.unreliable: self.env.process(self.send_ack(RingMsg("ACK_COORDINATOR", msg.transaction_id, self.id) , msg.sender))
-
                 if self.id != msg.initiator:
+                    if self.unreliable: self.env.process(self.send_ack(RingMsg("ACK_COORDINATOR", msg.transaction_id, self.id) , msg.sender))
                     self.elected = msg.elected
                     self.env.process(self.send(CoordinatorRingMsg(msg.transaction_id, self.id, msg.initiator, msg.elected)))
                 else:

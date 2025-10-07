@@ -21,13 +21,13 @@ from utils import max_delay
 #       - nodes -> nodes of the network
 class RingSimulation(Simulation):
     
-    def __init__(self, env, n_nodes, delay_mean, sim_stats, n_initiators = 1, unreliable = False, loss=0, timeout=0, debug_mode=False):
+    def __init__(self, env, n_nodes, delay_mean, sim_stats, n_initiators = 1, unreliable = False, loss=0.0, timeout=0, debug_mode=False):
         super().__init__(env, n_nodes, delay_mean)
         self.n_initiators = n_initiators
         self.unreliable = unreliable
         self.sim_stats = sim_stats
         self.debug_mode = debug_mode
-        self.timeout=max_delay(timeout, delay_mean)
+        self.timeout=timeout
         self.loss=loss
 
         for i in range(n_nodes):        # create nodes with IDs i = 0, 1, 2, ...
@@ -37,6 +37,16 @@ class RingSimulation(Simulation):
             self.nodes[i].obtain_peers(self.nodes)
 
         self.add_triggers()
+
+    def __str__(self):
+        return (
+            f"- Number of nodes: {self.n_nodes}\n"
+            f"- Number of initiators: {self.n_initiators}\n"
+            f"- Unreliability: {self.unreliable}\n"
+            f"- Timeout: {self.timeout}\n"
+            f"- Delay mean: {self.delay_mean}\n"
+            f"- Loss: {self.loss}"
+        )
 
     # method to start an election; starting conditions: coordinator crashed and n initiators
     def start_election(self):
@@ -78,7 +88,7 @@ class RingSimulation(Simulation):
         self.finish_event = self.env.event()
 
         for i in range(self.n_nodes):
-            self.nodes.append(RingNode(env, i, self.delay_mean, self.unreliable, self.debug_mode, self.loss, self.timeout))
+            self.nodes.append(RingNode(self.env, i, self.delay_mean, self.unreliable, self.debug_mode, self.loss, self.timeout))
             
         # pass the peers to the nodes
         for i in range(self.n_nodes):
