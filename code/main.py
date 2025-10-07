@@ -20,7 +20,8 @@ stats_ring = SimStats(initiators, delay_mean, n_nodes, "Ring")
 stats_ring.set_id(len(sim_manager.stats))
 sim_manager.insert_stat(stats_ring)
 env_ring = simpy.Environment()
-ring = RingSimulation(env_ring, n_nodes, delay_mean, stats_ring, unreliable=False)
+ring = RingSimulation(env_ring, n_nodes, delay_mean, stats_ring)          # reliable links
+# ring = RingSimulation(env_ring, n_nodes, delay_mean, stats_ring, unreliable=True, loss=0.8, timeout=delay_mean, debug_mode=True)
 
 for i in range(n_sim):
     env_ring.process(ring.start_election())
@@ -33,8 +34,8 @@ stats_ring.compute_var()
 stats_ring.compute_ci()
 
 # ANALYZE TURNAROUND TIME
-stats_ring.plot_runtimes_hist(200)     
-stats_ring.plot_runtimes_box_plot()
+# stats_ring.plot_runtimes_hist(200)     
+# stats_ring.plot_runtimes_box_plot()
 
 print(stats_ring)
 
@@ -56,10 +57,72 @@ stats_bully.compute_var()
 stats_bully.compute_ci()
 
 # ANALYZE TURNAROUND TIME
-stats_bully.plot_runtimes_hist(200)     
-stats_bully.plot_runtimes_box_plot()
+# stats_bully.plot_runtimes_hist(200)     
+# stats_bully.plot_runtimes_box_plot()
 
 print(stats_bully)
+
+# ------------ BULLY VS RING -----------
+
+sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
+
+# ------------ MULTIFACTORS ANALYSIS -------------
+
+# This method plots different simulations results for different factors
+#   params:
+#       tot_sims - number of simulations to perform
+#       n_init - list containing the number of initiators for each simulation
+#       n_n - list containing the number of nodes for each simulation
+#       n_delays - list containing the delays' mean for each simulation
+#       bully - boolean value, if true the simulations will be the one of the bully
+#       unreliable - boolean value, if true we are under the unreliable links assumption
+# TODO: manage unreliable links
+# TODO: add n_timeout
+# TODO: add n_loss_rate
+def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, bully, unreliable):
+    ids = []
+
+    for i in range(tot_sims):
+        name = f"Bully" if bully else f"Ring"
+        stats = SimStats(n_init[i], n_delays[i], n_n[i], name)
+        stats.set_id(len(sim_manager.stats))
+        sim_manager.insert_stat(stats)
+        ids.append(stats.id)
+
+        env = simpy.Environment()
+        if bully:
+            bully = BullySimulation(env, n_n[i], n_delays[i], 0.8, stats)
+
+            for j in range (n_sim):
+                bully.env.process(bully.start_election(n_init[i]))
+                bully.env.run()
+                env = simpy.Environment()
+                bully.env = env
+        else:
+            ring = RingSimulation(env, n_n[i], n_delays[i], stats, unreliable=False)
+
+            for j in range(n_sim):
+                env.process(ring.start_election())
+                env.run()
+                env = simpy.Environment()
+                ring.clean(env)
+
+        stats.compute_mean()
+        stats.compute_var()
+        stats.compute_ci()
+
+    sim_manager.cmp_runtimes(ids, 200, sim_name)
+
+tot_sims = 3
+sim_title = "Delays Mean"
+n_init = [initiators]*tot_sims
+n_n = [n_nodes]*tot_sims
+n_delays = [55, 110, 220]
+
+factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, bully=True, unreliable=False)
+
+# ------------ SHOW PLOTS ----------------
+plt.show()
 
 '''
 # 3. Analyze loss rates related to runtime
@@ -96,64 +159,3 @@ analyze_mean(0.2, sim_manager)
 analyze_mean(0.5, sim_manager)
 analyze_mean(0.8, sim_manager)
 '''
-
-# ------------ BULLY VS RING -----------
-
-sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
-
-# ------------ MULTIFACTORS ANALYSIS -------------
-
-# This method plots different simulations results for different factors
-#   params:
-#       tot_sims - number of simulations to perform
-#       n_init - list containing the number of initiators for each simulation
-#       n_n - list containing the number of nodes for each simulation
-#       n_delays - list containing the delays' mean for each simulation
-#       bully - boolean value, if true the simulations will be the one of the bully
-#       unreliable - boolean value, if true we are under the unreliable links assumption
-# TODO: manage unreliable links
-# TODO: add n_timeout
-# TODO: add n_loss_rate
-def factors_sim(tot_sims, n_init, n_n, n_delays, bully, unreliable):
-    ids = []
-
-    for i in range(tot_sims):
-        name = f"Bully {len(sim_manager.stats)}" if bully else f"Ring {len(sim_manager.stats)}"
-        stats = SimStats(n_init[i], n_delays[i], n_n[i], name)
-        stats.set_id(len(sim_manager.stats))
-        sim_manager.insert_stat(stats)
-        ids.append(stats.id)
-
-        env = simpy.Environment()
-        if bully:
-            bully = BullySimulation(env, n_n[i], n_delays[i], 0.8, stats)
-
-            for j in range (n_sim):
-                bully.env.process(bully.start_election(n_init[i]))
-                bully.env.run()
-                env = simpy.Environment()
-                bully.env = env
-        else:
-            ring = RingSimulation(env, n_n[i], n_delays[i], stats, unreliable=False)
-
-            for j in range(n_sim):
-                env.process(ring.start_election())
-                env.run()
-                env = simpy.Environment()
-                ring.clean(env)
-
-        stats.compute_mean()
-        stats.compute_var()
-        stats.compute_ci()
-
-    sim_manager.cmp_runtimes(ids, 200)
-
-tot_sims = 3
-n_init = [1,2,3]
-n_n = [n_nodes]*tot_sims
-n_delays = [delay_mean]*tot_sims
-
-factors_sim(tot_sims, n_init, n_n, n_delays, bully=True, unreliable=False)
-
-# ------------ SHOW PLOTS ----------------
-plt.show()

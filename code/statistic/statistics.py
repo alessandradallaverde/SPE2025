@@ -154,14 +154,30 @@ class StatsManager:
         plt.title("Box Plot")
         plt.ylabel("Turnaround Times")
 
-    def cmp_runtimes(self, ids, bins):
+    def cmp_runtimes(self, ids, bins, name):
 
-        plt.figure()
+        title = "Simulations Comparison - "+name
+        fig, axs = plt.subplots(len(ids))
+        fig.suptitle(title)
+        
+        for i, id in enumerate(ids):
+            sim = self.stats[id]
 
-        for i in ids:
-            counts, bin_edges = np.histogram(self.stats[i].runtimes, bins=bins, density=False)
-            bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
             color = (random.random(), random.random(), random.random())
-            plt.plot(bin_centers, counts, "--", color=color, label="Histogram curve")
+            sub_label=""
+            match name:
+                case "Initiators": 
+                    sub_label= f"{sim.name} with #initiators={sim.initiators}"
+                case "Number of Nodes":
+                    sub_label=f"{sim.name} with #nodes={sim.n_nodes}"
+                case "Delays Mean":
+                    sub_label=f"{sim.name} with delay mean={sim.delay}"
+                case "Packet Loss":
+                    pass
+                case _:
+                    sub_label=f"{sim.name}"
 
-        plt.xlim()
+            axs[i].hist(sim.runtimes, bins=bins, color=color, label=sub_label)
+            axs[i].legend(loc="best")
+
+       
