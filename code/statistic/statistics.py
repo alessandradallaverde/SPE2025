@@ -20,13 +20,14 @@ import scipy.stats as st
 #       var - var of the runtimes
 #       err - err of the runtimes
 class SimStats:
-    def __init__(self, initiators, delay, n_nodes, name, timeout=-1, loss_rate=-1):
+    def __init__(self, initiators, delay, n_nodes, name, unreliable = False, timeout=-1, loss_rate=-1):
         self.initiators = initiators
         self.delay = delay
         self.n_nodes = n_nodes
         self.timeout = timeout
         self.loss_rate = loss_rate
         self.name = name
+        self.unreliable=unreliable
 
         self.runtimes = []
         self.id = -1
@@ -47,6 +48,10 @@ class SimStats:
     # list of class StatsManager
     def set_id(self, id):
         self.id = id
+
+    def set_loss(self, loss):
+        self.loss_rate=loss
+        self.unreliable=True
 
     # add the turnaround time to the list
     #   params:
@@ -83,14 +88,19 @@ class SimStats:
     #       bins - bins of the histogram
     def plot_runtimes_hist(self, bins):
         plt.figure()
-        plt.hist(self.runtimes, bins=bins, label = "Simulations with reliable links")
+        rel = "Unreliable" if self.unreliable else "Reliable"
+        title = self.name+" - Simulations with "+rel+" Links"
+        plt.title(title)
+        plt.hist(self.runtimes, bins=bins)
         plt.xlim()
-        plt.xlabel("Runtime in ms")
+        plt.xlabel("runtime in ms")
+        plt.ylabel("#sim")
+        plt.axvline(x = self.mean, color = 'red', label = 'Mean')
         plt.legend()
 
     def plot_ring_distribution(self, bins):
         plt.figure()
-        plt.hist(self.runtimes, bins=bins, label = "Simulations with reliable links", density = True)
+        plt.hist(self.runtimes, bins=bins, label = "Ring - Simulations with Reliable Links", density = True)
 
         a, loc, scale = st.gamma.fit(self.runtimes, floc=0)
         x = np.linspace(min(self.runtimes), max(self.runtimes), bins)
@@ -99,14 +109,15 @@ class SimStats:
 
         plt.xlim()
         plt.xlabel("Runtime in ms")
+        plt.ylabel("Density")
         plt.legend()
 
     # method to plot the boxplot of the simulation runtimes
     def plot_runtimes_box_plot(self):
         plt.figure()
-        plt.boxplot(self.runtimes)
-        plt.title("Box Plot")
-        plt.ylabel("Turnaround Times")
+        plt.boxplot(self.runtimes, tick_labels=[self.name])
+        plt.title(self.name+" - Box Plot")
+        plt.ylabel("Turnaround Time")
 
     # method to compute bootstrap ci
     # parameters:
@@ -151,8 +162,8 @@ class StatsManager:
         plt.figure()
         labels=[self.stats[id1].name, self.stats[id2].name]
         plt.boxplot([self.stats[id1].runtimes, self.stats[id2].runtimes], labels=labels)
-        plt.title("Box Plot")
-        plt.ylabel("Turnaround Times")
+        plt.title("Box Plots")
+        plt.ylabel("Turnaround Time")
 
     def cmp_runtimes(self, ids, bins, name):
 
@@ -172,12 +183,13 @@ class StatsManager:
                     sub_label=f"{sim.name} with #nodes={sim.n_nodes}"
                 case "Delays Mean":
                     sub_label=f"{sim.name} with delay mean={sim.delay}"
-                case "Packet Loss":
-                    pass
+                case "Packet Loss Rate":
+                    sub_label=f"{sim.name} with loss rate={sim.loss_rate}"
                 case _:
                     sub_label=f"{sim.name}"
 
             axs[i].hist(sim.runtimes, bins=bins, color=color, label=sub_label)
             axs[i].legend(loc="best")
+            axs[i].axvline(x=sim.mean)
 
        

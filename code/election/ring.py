@@ -21,17 +21,17 @@ from utils import max_delay
 #       - nodes -> nodes of the network
 class RingSimulation(Simulation):
     
-    def __init__(self, env, n_nodes, delay_mean, sim_stats, n_initiators = 1, unreliable = False, loss=0.0, timeout=0, debug_mode=False):
+    def __init__(self, env, n_nodes, delay_mean, sim_stats, n_initiators = 1, unreliable = False, loss=0.0, timeout=0.0, debug_mode=False):
         super().__init__(env, n_nodes, delay_mean)
         self.n_initiators = n_initiators
         self.unreliable = unreliable
         self.sim_stats = sim_stats
         self.debug_mode = debug_mode
-        self.timeout=timeout
+        self.timeout=max_delay(timeout,delay_mean)
         self.loss=loss
 
         for i in range(n_nodes):        # create nodes with IDs i = 0, 1, 2, ...
-            self.nodes.append(RingNode(env, i, delay_mean, self.unreliable, debug_mode, loss, timeout))
+            self.nodes.append(RingNode(env, i, delay_mean, self.unreliable, debug_mode, loss, timeout=self.timeout))
 
         for i in range(n_nodes):        # pass the peers to the nodes
             self.nodes[i].obtain_peers(self.nodes)
