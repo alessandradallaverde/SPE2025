@@ -116,7 +116,6 @@ class BullyNode(Node):
         msg = yield self.queue.get()
         # keep track of highest node id that ever interacted with this node
         self.max_active_id = max(self.max_active_id, msg.sender_id)
-        
         if msg.type == "ELECTION":
             if self.debug_mode:
                 if msg.sender_id == -1:
