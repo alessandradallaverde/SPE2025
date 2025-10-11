@@ -60,8 +60,7 @@ class BullyNode(Node):
                         self.env.process(self.reliable_send("ELECTION", i))
                     
                     # wait for max delay
-                    # TODO: modify timeout
-                    yield self.env.timeout(2 * self.max_wait * (len(self.peers) - self.id - 1))
+                    yield self.env.timeout(2 * self.max_wait)
 
                     # wait for a certain time to be passed ... if it wasn't stopped it is elected
                     if not self.blocked:
@@ -142,9 +141,8 @@ class BullyNode(Node):
                         for n_id in self.missing_ack:
                             self.env.process(self.unreliable_send("ELECTION", n_id))
                             
-                        # delay is computed as 2 * max_RTT * number of receivers
-                        # TODO: modify timeout 
-                        yield self.env.timeout(2 * self.max_wait * len(self.missing_ack) )
+                        # delay is computed as 2 * max_RTT
+                        yield self.env.timeout(2 * self.max_wait )
                         # timeout triggered check responses
                         if not self.blocked:
                             # no OK received, check how many answer were received
@@ -160,8 +158,7 @@ class BullyNode(Node):
                                     for n_id in self.missing_ack:
                                         self.env.process(self.unreliable_send("COORDINATOR", n_id))
                                     # set timeout for retransmission
-                                    # TODO: modify timeout
-                                    yield self.env.timeout(2 * self.max_wait * len(self.missing_ack) )
+                                    yield self.env.timeout(2 * self.max_wait )
                                 
                                 # election of group terminated trigger finish event
                                 self.elected = self.id

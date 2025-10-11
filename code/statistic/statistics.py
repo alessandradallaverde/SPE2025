@@ -118,6 +118,22 @@ class SimStats:
         plt.boxplot(self.runtimes, tick_labels=[self.name])
         plt.title(self.name+" - Box Plot")
         plt.ylabel("Turnaround Time")
+    
+    # method to remove outliers datapoints from runtimes
+    def remove_outliers(self, whis = 1.5):
+        # follows boxplot where outliers are outside the "whiskers"
+        q_1 =  np.quantile(self.runtimes, 0.25)
+        q_3 = np.quantile(self.runtimes, 0.75)
+        bound_1 = q_1 - whis * (q_3 - q_1)
+        bound_2 = q_3 + whis * (q_3 - q_1)
+
+        def not_outlier(e):
+            if e < bound_1 or e > bound_2:
+                return False
+            return True
+
+        self.runtimes = list(filter(not_outlier, self.runtimes))
+
 
     # method to compute bootstrap ci
     # parameters:
@@ -191,5 +207,9 @@ class StatsManager:
             axs[i].hist(sim.runtimes, bins=bins, color=color, label=sub_label)
             axs[i].legend(loc="best")
             axs[i].axvline(x=sim.mean)
+    
+    def remove_all_outliers(self):
+        for i in range(len(self.stats)):
+            self.stats[i].remove_outliers()
 
        

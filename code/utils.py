@@ -3,7 +3,7 @@ from scipy.stats import expon
 
 # create an exponential delay
 def delay(mean):
-    return random.expovariate(1/mean);
+    return random.expovariate(1/mean)
 
 # compares two integers
 def cmp(a, b):

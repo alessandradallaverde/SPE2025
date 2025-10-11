@@ -12,8 +12,8 @@ DELAY = 110         # mean of exponential distribution for delays
 INITIATORS = 1
 N_SIM = 10000
 LOSS = 0.8
-UNRELIABLE = False
-DELAY_Q=0.8         # quantile of exponential distribution
+UNRELIABLE = True
+DELAY_Q = 0.7         # quantile of exponential distribution
 
 sim_manager = StatsManager()
 
@@ -72,9 +72,11 @@ stats_bully.plot_runtimes_box_plot()
 
 print(stats_bully)
 
-# ------------ BULLY VS RING -----------
 
+# ------------ BULLY VS RING -----------
+sim_manager.remove_all_outliers()
 sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
+
 
 # ------------ MULTIFACTORS ANALYSIS -------------
 
@@ -138,7 +140,7 @@ n_n = [N_NODES]*tot_sims
 n_delays = [DELAY]*tot_sims
 n_loss = [0.9, 0.8, 0.5]
 
-factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
+#factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
 
 # ------------ SHOW PLOTS ----------------
 plt.show()
