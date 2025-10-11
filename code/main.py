@@ -33,6 +33,7 @@ for i in range(N_SIM):
     env_ring = simpy.Environment()
     ring.clean(env_ring)            # clean RingSimulation for the next simulation
 
+stats_ring.remove_outliers()
 stats_ring.compute_mean()
 stats_ring.compute_var()
 stats_ring.compute_ci()
@@ -61,6 +62,7 @@ for i in range (N_SIM):
     env_bully = simpy.Environment()
     bully.env = env_bully
 
+stats_bully.remove_outliers()
 stats_bully.compute_mean()
 stats_bully.compute_var()
 stats_bully.compute_ci()
@@ -73,7 +75,6 @@ print(stats_bully)
 
 
 # ------------ BULLY VS RING -----------
-sim_manager.remove_all_outliers()
 sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
 
 
