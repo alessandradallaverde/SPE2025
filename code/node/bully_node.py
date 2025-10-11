@@ -2,7 +2,7 @@ from numpy import random
 from node.node import Node
 from msg.bully_msg import BullyMsg
 from utils import delay, max_delay
-from simpy import Store, core
+from simpy import Store, core, AnyOf
 
 # this class represents a node in the bully algorithm execution
 class BullyNode(Node):
@@ -58,8 +58,7 @@ class BullyNode(Node):
                     # send ELECTION messages to all nodes with greater id
                     for i in range(self.id + 1, len(self.peers)):
                         self.env.process(self.reliable_send("ELECTION", i))
-                    
-                    # wait for max delay
+
                     yield self.env.timeout(2 * self.max_wait)
 
                     # wait for a certain time to be passed ... if it wasn't stopped it is elected
@@ -98,6 +97,7 @@ class BullyNode(Node):
         if not self.peers[dest_id].crashed:
             # create the election message
             election_msg = BullyMsg(type, self.id)
+            
             if self.debug_mode:
                 print(f"Time {self.env.now:.2f}: Node {self.id} sends {type} to node {dest_id}")
 
@@ -113,8 +113,10 @@ class BullyNode(Node):
        
 
     def unreliable_receive(self):
-        
         msg = yield self.queue.get()
+        # keep track of highest node id that ever interacted with this node
+        self.max_active_id = max(self.max_active_id, msg.sender_id)
+        
         if msg.type == "ELECTION":
             if self.debug_mode:
                 if msg.sender_id == -1:
@@ -131,43 +133,29 @@ class BullyNode(Node):
                     # if id is greater than sender: stop election
                     self.env.process(self.unreliable_send("OK", msg.sender_id))
 
-                if not self.el_in_progress:
-                    # each node can only start election ONCE
+                # OPTIMIZATION: don't even start election if you already know of a node with higher ID
+                if (not self.el_in_progress) and self.max_active_id <= self.id:
+                    # each node can only start election ONCE (retransmissions are not counted)
                     self.el_in_progress = True
                     # send ELECTION messages to all nodes with greater id
+                    self.missing_ack = []
                     self.missing_ack.extend(range(self.id + 1, len(self.peers) - 1))
+                    yield self.env.process(self.retransmit("ELECTION"))
                     
-                    while self.el_in_progress:
-                        for n_id in self.missing_ack:
-                            self.env.process(self.unreliable_send("ELECTION", n_id))
-                            
-                        # delay is computed as 2 * max_RTT
-                        yield self.env.timeout(2 * self.max_wait )
-                        # timeout triggered check responses
-                        if not self.blocked:
-                            # no OK received, check how many answer were received
-                            if len(self.missing_ack) == 0:
-                                # not waiting for any response: this node is the one with highest id
-                                # prepare to wait for all nodes to send ACK of COORDINATOR message
-                                self.missing_ack = []
-                                self.missing_ack.extend(range(0, len(self.peers) - 1))
-                                # do not send COORDINATOR message to self
-                                self.missing_ack.remove(self.id)
+                    # all answers recived: proceed
+                    if not self.blocked:
+                        # no OK received: this node is the one with highest id
+                        # prepare to wait for all nodes to send ACK of COORDINATOR message
+                        self.missing_ack = []
+                        self.missing_ack.extend(range(0, len(self.peers) - 1))
+                        # do not send COORDINATOR message to self
+                        self.missing_ack.remove(self.id)
+                        yield self.env.process(self.retransmit("COORDINATOR"))
+                        # election of group terminated trigger finish event
+                        self.elected = self.id
+                        self.finish.succeed()
+                        raise core.StopSimulation("") 
 
-                                while len(self.missing_ack) != 0:
-                                    for n_id in self.missing_ack:
-                                        self.env.process(self.unreliable_send("COORDINATOR", n_id))
-                                    # set timeout for retransmission
-                                    yield self.env.timeout(2 * self.max_wait )
-                                
-                                # election of group terminated trigger finish event
-                                self.elected = self.id
-                                self.finish.succeed()
-                                raise core.StopSimulation("")
-
-                        else:
-                            # there is another node with higher id
-                            self.el_in_progress = False    
             else:    
                 self.env.process(self.unreliable_send("ACK", msg.sender_id))               
 
@@ -177,7 +165,8 @@ class BullyNode(Node):
                 print(
                     f"Time {self.env.now:.2f}: Node {self.id} receives OK message from node {msg.sender_id}"
                 )
-
+            
+            self.update_ack_list(msg.sender_id)
             # stop election
             self.blocked = True
 
@@ -186,10 +175,8 @@ class BullyNode(Node):
                 print(
                     f"Time {self.env.now:.2f}: Node {self.id} receives ACK message from node {msg.sender_id}"
                 )
-            # remove from the node from missing_ack list
-            if msg.sender_id in self.missing_ack:
-                # you could receive an ack twice
-                self.missing_ack.remove(msg.sender_id)
+            
+            self.update_ack_list(msg.sender_id)
 
         elif msg.type == "COORDINATOR":
             if self.debug_mode:
@@ -202,6 +189,27 @@ class BullyNode(Node):
             # if active, set election status of node
             self.el_in_progress = False
 
+    # udpates ack list counter and triggers appropriate event when all answers arrived
+    def update_ack_list(self, sender): 
+        # remove the node from missing_ack list
+        if sender in self.missing_ack:
+            # you could receive an ack/OK twice
+            self.missing_ack.remove(sender)
+
+        if len(self.missing_ack) == 0 and not self.wait_msg.triggered:
+            # trigger event
+            self.wait_msg.succeed()
+    
+    # send message that will be retransmitted if not all answers are received
+    def retransmit(self, msg_type):
+        self.wait_msg = self.env.event()
+        # OPTIMIZATION
+        # If while retransmitting a message you discover a node of higher ID quit
+        while len(self.missing_ack) != 0 and not self.blocked:
+            for n_id in self.missing_ack:
+                self.env.process(self.unreliable_send(msg_type, n_id))
+            # set timeout /wait for anwers
+            yield AnyOf(self.env, [self.wait_msg, self.env.timeout(2 * self.max_wait)])
 
     # returns True if all nodes decided on coordinator
     def finished(self):
@@ -219,6 +227,9 @@ class BullyNode(Node):
         self.missing_ack = []
         self.env = env
         self.queue = Store(env)
+        self.wait_msg = env.event()
+        # ID of greatest node that gave OK
+        self.max_active_id = -1
     
     # sets wether election happens with reliable or unreliable links with a network packet loss rate and if debug messages are activated
     def set_behaviour(self, loss_rate, debug_mode = False):

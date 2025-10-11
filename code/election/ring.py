@@ -27,7 +27,7 @@ class RingSimulation(Simulation):
         self.unreliable = unreliable
         self.sim_stats = sim_stats
         self.debug_mode = debug_mode
-        self.timeout=max_delay(timeout,delay_mean)
+        self.timeout = 2 * max_delay(timeout,delay_mean)
         self.loss=loss
 
         for i in range(n_nodes):        # create nodes with IDs i = 0, 1, 2, ...

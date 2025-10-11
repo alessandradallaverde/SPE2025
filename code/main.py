@@ -3,7 +3,6 @@ import simpy
 from election.ring import RingSimulation
 from election.bully import BullySimulation
 from statistic.statistics import SimStats, StatsManager
-
 import matplotlib.pyplot as plt
 
 # ------------------- SETTINGS ---------------------
@@ -13,7 +12,7 @@ INITIATORS = 1
 N_SIM = 10000
 LOSS = 0.8
 UNRELIABLE = True
-DELAY_Q = 0.7         # quantile of exponential distribution
+DELAY_Q = 0.8         # quantile of exponential distribution
 
 sim_manager = StatsManager()
 
