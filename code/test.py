@@ -9,28 +9,32 @@ N_NODES = 4
 DELAY = 110         # mean of exponential distribution for delays 
 INITIATORS = 1
 N_SIM = 3
-LOSS = 0.5
+LOSS = 0.8
 UNRELIABLE = True
 DELAY_Q = 0.7         # quantile of exponential distribution
 DEBUG = True
 
 sim_manager = StatsManager()
 
-# ------------ BULLY ALGORITHM SIMULATION -----------
+max_delay = (2 * utils.max_delay(DELAY_Q, DELAY))
+
+# ------------ RING ALGORITHM SIMULATION -----------
 stats_ring = SimStats(INITIATORS, DELAY, N_NODES, "Ring")
 stats_ring.set_loss(LOSS)
 stats_ring.set_id(len(sim_manager.stats))
 sim_manager.insert_stat(stats_ring)
 env_ring = simpy.Environment()
-max_delay = (2 * utils.max_delay(DELAY_Q, DELAY))
-ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS,unreliable=True, loss=LOSS, timeout=DELAY_Q, debug_mode=DEBUG)
-
+if UNRELIABLE:          #unreliable links
+    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS, unreliable=True, loss=LOSS, timeout=0.8, debug_mode=True)
+    stats_ring.set_loss(LOSS)
+else:           #reliable links
+    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring)
 
 for i in range (N_SIM):
     ring.env.process(ring.start_election())
     ring.env.run()
     env_ring = simpy.Environment()
-    ring.env = env_ring
+    ring.clean(env_ring)
 
 # ------------ BULLY ALGORITHM SIMULATION -----------
 stats_bully = SimStats(INITIATORS, DELAY, N_NODES, "Bully")

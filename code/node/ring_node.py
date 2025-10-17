@@ -21,7 +21,6 @@ class RingNode(Node):
     def __init__(self, env, id, delay_mean, unreliable, debug_mode, loss, timeout):
        super().__init__(env, id)
        self.delay_mean = delay_mean
-       self.pending_ack = []
        self.unreliable = unreliable;
        self.debug_mode=debug_mode
        self.loss=loss
@@ -45,9 +44,9 @@ class RingNode(Node):
         # we continue sending the message if we didn't receive an ack
         while True:
 
+            if self.unreliable: msg.set_event(self.env.event())
             delay = utils.delay(self.delay_mean)
             yield self.env.timeout(delay)
-
             next = self.find_next()     # find the next active neighbor
             yield self.peers[next].queue.put(msg)       # send the message 
 
@@ -59,18 +58,12 @@ class RingNode(Node):
 
             if not self.unreliable: break   # if we have reliable links we do not need acks (replication)
 
-            ack = RingMsg("ACK_"+msg.type, msg.transaction_id, next)
-            self.pending_ack.append(ack)
-
-            yield self.env.timeout(self.timeout)       # wait for the ACK
-
-            if ack in self.pending_ack:     
+            result = yield self.env.any_of([msg.ack_event, self.env.timeout(self.timeout)])      # wait for the ACK or the timeout
+            if msg.ack_event in result:         # the sender received the ack
+                break
+            else:           # don't stop, restart cycle for resending the message
                 if self.debug_mode:
                     print(f"Time {(self.env.now-delay):.2f}: Node {self.id} didn't received ACK from {next}, resend message")
-                self.pending_ack.remove(ack)
-            else:
-                break
-
 
     # this method is used to send an ack
     def send_ack(self, msg, receiver):
@@ -101,21 +94,22 @@ class RingNode(Node):
                 else:       # the node receives an election message
                     msg.ids.append(self.id)
                     self.env.process(self.send(ElectionRingMsg(msg.transaction_id,self.id, msg.ids)))
-                
+
                 if self.unreliable and msg.sender!=-1:      # if the node isn't the initiator, send an ACK to the sender
-                    self.env.process(self.send_ack(RingMsg("ACK_ELECTION",msg.transaction_id,self.id), msg.sender))
+                    self.env.process(self.send_ack(RingMsg("ACK_ELECTION",msg.transaction_id,self.id, msg.ack_event), msg.sender))
 
             elif msg.type == "COORDINATOR":
 
                 if self.id != msg.initiator:
-                    if self.unreliable: self.env.process(self.send_ack(RingMsg("ACK_COORDINATOR", msg.transaction_id, self.id) , msg.sender))
+                    if self.unreliable: 
+                        self.env.process(self.send_ack(RingMsg("ACK_COORDINATOR",msg.transaction_id,self.id, msg.ack_event) , msg.sender))
                     self.elected = msg.elected
                     self.env.process(self.send(CoordinatorRingMsg(msg.transaction_id, self.id, msg.initiator, msg.elected)))
                 else:
                     self.finish.succeed()       # we finish the simulation when a coordinator cycle is completed
 
-            elif "ACK" in msg.type and msg in self.pending_ack: 
-                self.pending_ack.remove(msg)
+            elif "ACK" in msg.type: 
+                msg.ack_event.succeed()
             
 
     # find the next active neighbor

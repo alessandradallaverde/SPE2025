@@ -11,7 +11,7 @@ DELAY = 110         # mean of exponential distribution for delays
 INITIATORS = 1
 N_SIM = 10000
 LOSS = 0.8
-UNRELIABLE = True
+UNRELIABLE = False
 DELAY_Q = 0.8         # quantile of exponential distribution
 
 sim_manager = StatsManager()
@@ -22,7 +22,7 @@ stats_ring.set_id(len(sim_manager.stats))
 sim_manager.insert_stat(stats_ring)
 env_ring = simpy.Environment()
 if UNRELIABLE:          #unreliable links
-    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS,unreliable=True, loss=LOSS, timeout=DELAY_Q)
+    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS, unreliable=True, loss=LOSS, timeout=DELAY_Q)
     stats_ring.set_loss(LOSS)
 else:           #reliable links
     ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring)          
