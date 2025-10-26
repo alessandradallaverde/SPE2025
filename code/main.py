@@ -97,7 +97,7 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
         name = f"Bully" if bully else f"Ring"
         stats = SimStats(n_init[i], n_delays[i], n_n[i], name)
         if unreliable:
-            stats.set_loss(round(1-n_loss[i],2))
+            stats.set_loss(round(n_loss[i],2))
         stats.set_id(len(sim_manager.stats))
         sim_manager.insert_stat(stats)
         ids.append(stats.id)
@@ -138,7 +138,7 @@ sim_title = "Packet Loss Rate"
 n_init = [INITIATORS]*tot_sims
 n_n = [N_NODES]*tot_sims
 n_delays = [DELAY]*tot_sims
-n_loss = [0.9, 0.8, 0.5]
+n_loss = [0.1, 0.2, 0.5]
 
 #factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
 
