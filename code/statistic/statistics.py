@@ -81,7 +81,7 @@ class SimStats:
 
     # method to compute asymptotic CI 95% confidence
     def compute_ci(self):
-        self.err = 1.96 * math.sqrt(self.var / self.n_nodes)
+        self.err = 1.96 * math.sqrt(self.var / len(self.runtimes))
 
     # method to plot the histogram of the simulation runtimes
     #   params:
