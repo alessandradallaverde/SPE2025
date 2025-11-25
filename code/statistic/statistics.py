@@ -30,19 +30,35 @@ class SimStats:
         self.unreliable=unreliable
 
         self.runtimes = []
+        self.msg_counter = []
         self.id = -1
-        self.mean = 0
-        self.var = 0
-        self.err = 0
+
+        self.mean_rtt = 0
+        self.mean_msg = 0
+        self.var_rtt = 0
+        self.var_msg = 0
+        self.err_rtt = 0
+        self.err_msg = 0
+
+        # for bully simulation in the reliable case: identify which simulations are "wrong"
+        self.wrong_sims = []
 
     def __str__(self):
-        return (
+        main_info = (
             f"{self.name} Algorithm:\n"
             f"- Simulations: {len(self.runtimes)}\n"
             f"- Parameters: N = {self.n_nodes}, init = {self.initiators}, mean delay = {self.delay:.2f}\n"
-            f"- Turnaround time mean: {self.mean:.2f} \u00B1 {self.err:.2f} ms\n"
-            f"- Turnaround time var: {self.var:.2f}"
+            f"- Turnaround time mean: {self.mean_rtt:.2f} \u00B1 {self.err_rtt:.2f} ms\n"
+            f"- Turnaround time var: {self.var_rtt:.2f}\n"
+            f"- Message number mean: {self.mean_msg:.2f} \u00B1 {self.err_msg:.2f}\n"
+            f"- Message number var: {self.var_msg:.2f}\n"
         )
+        
+        if self.name == "Bully" and not self.unreliable:
+            wrong_stat = (len(self.wrong_sims) / len(self.runtimes)) * 100
+            main_info += f"- Wrong simulations: {wrong_stat:.4f} %"
+
+        return main_info
 
     # method to set the id to the simulation (it will be the index of the stats 
     # list of class StatsManager
@@ -59,29 +75,95 @@ class SimStats:
     def add_runtime(self, t_time):
         self.runtimes.append(t_time)
 
+    # increase counter message
+    #   params:
+    #       id - simulation index
+    def add_msg(self, id):
+        if len(self.msg_counter) <= id:
+            self.msg_counter.insert(id, 0)
+        self.msg_counter[id] += 1
+
+    # add index of simulation to the wrong simulations counter
+    def add_wrong_sim(self):
+        self.wrong_sims.append(len(self.runtimes))
+
     # return the list of runtimes
     def get_runtimes(self):
         return self.runtimes
 
-    # computes mean of the runtimes
-    def compute_mean(self):
-        self.mean = 0
-        for el in self.runtimes:
-            self.mean += el
+    def check_wrong_sim(self, whis = 1.5):
+        # follows boxplot where outliers are outside the "whiskers"
+        q_1 =  np.quantile(self.runtimes, 0.25)
+        q_3 = np.quantile(self.runtimes, 0.75)
+        bound_1 = q_1 - whis * (q_3 - q_1)
+        bound_2 = q_3 + whis * (q_3 - q_1)
 
-        self.mean = self.mean/len(self.runtimes)
+        wrong_outlier = 0
+        for w_s in self.wrong_sims:
+            if self.runtimes[w_s] < bound_1 or self.runtimes[w_s] > bound_2:
+                wrong_outlier += 1
+        
+        print ( (wrong_outlier/len(self.wrong_sims))*100, " of wrong simulations are also outliers")
+        
 
-    # compute variance of the runtimes
-    def compute_var(self):
-        self.var = 0
-        for el in self.runtimes:
-            self.var += ((el - self.mean)**2)
+    # computes mean of runtimes
+    def compute_mean_rtt(self):
+        self.mean_rtt = self.compute_mean(self.runtimes)
 
-        self.var = self.var/(len(self.runtimes)-1)
+    # computes mean of number of messages
+    def compute_mean_msg(self):
+        self.mean_msg = self.compute_mean(self.msg_counter)
+
+    # computes mean
+    #   params:
+    #       stat_arr - reference to array to compute the mean of
+    #   returns:
+    #       mean     - mean of stat_arr
+    def compute_mean(self, stat_arr):
+        mean = 0
+        for el in stat_arr:
+            mean += el
+
+        return mean/len(stat_arr)
+
+
+    # computes variance of runtimes
+    def compute_var_rtt(self):
+        self.var_rtt = self.compute_var(self.runtimes, self.mean_rtt)
+
+    # computes variance of number of messages
+    def compute_var_msg(self):
+        self.var_msg = self.compute_var(self.msg_counter, self.mean_msg)
+
+    # compute variance
+    #   params:
+    #       stat_arr  - reference to array to compute the variance of
+    #       stat_mean - mean of given array
+    #   returns:
+    #       var       - variance of stat_arr
+    def compute_var(self, stat_arr, stat_mean):
+        var = 0
+        for el in stat_arr:
+            var += ((el - stat_mean)**2)
+
+        return var/(len(stat_arr)-1)
+    
+    # method to compute asymptotic CI 95% confidence for runtimes
+    def compute_ci_rtt(self):
+        self.err_rtt = self.compute_ci(self.var_rtt, len(self.runtimes))
+
+    # method to compute asymptotic CI 95% confidence for number of messages
+    def compute_ci_msg(self):
+        self.err_msg = self.compute_ci(self.var_msg, len(self.msg_counter))
 
     # method to compute asymptotic CI 95% confidence
-    def compute_ci(self):
-        self.err = 1.96 * math.sqrt(self.var / self.n_nodes)
+    #   params:
+    #       var       - variance of array to compute ci for
+    #       n         - length of array to compute ci for
+    #   returns:
+    #       err       - ci
+    def compute_ci(self, var, n):
+        return 1.96 * math.sqrt(var / n)
 
     # method to plot the histogram of the simulation runtimes
     #   params:
@@ -95,7 +177,7 @@ class SimStats:
         plt.xlim()
         plt.xlabel("runtime in ms")
         plt.ylabel("#sim")
-        plt.axvline(x = self.mean, color = 'red', label = 'Mean')
+        plt.axvline(x = self.mean_rtt, color = 'red', label = 'Mean')
         plt.legend()
 
     def plot_ring_distribution(self, bins):
@@ -119,7 +201,7 @@ class SimStats:
         plt.title(self.name+" - Box Plot")
         plt.ylabel("Turnaround Time")
     
-    # method to remove outliers datapoints from runtimes
+    # method to remove outliers datapoints from runtimes and msg 
     def remove_outliers(self, whis = 1.5):
         # follows boxplot where outliers are outside the "whiskers"
         q_1 =  np.quantile(self.runtimes, 0.25)
@@ -133,6 +215,14 @@ class SimStats:
             return True
 
         self.runtimes = list(filter(not_outlier, self.runtimes))
+
+        # TO DO: this line is needed because ring does not compute msg number
+        if (len(self.msg_counter) != 0):
+            q_1 =  np.quantile(self.msg_counter, 0.25)
+            q_3 = np.quantile(self.msg_counter, 0.75)
+            bound_1 = q_1 - whis * (q_3 - q_1)
+            bound_2 = q_3 + whis * (q_3 - q_1)
+            self.msg_counter = list(filter(not_outlier, self.msg_counter))
 
 
     # method to compute bootstrap ci
@@ -206,7 +296,7 @@ class StatsManager:
 
             axs[i].hist(sim.runtimes, bins=bins, color=color, label=sub_label)
             axs[i].legend(loc="best")
-            axs[i].axvline(x=sim.mean)
+            axs[i].axvline(x=sim.mean_rtt)
     
     def remove_all_outliers(self):
         for i in range(len(self.stats)):
