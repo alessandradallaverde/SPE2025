@@ -19,7 +19,7 @@ class BullySimulation(Simulation):
         self.sim_stats = sim_stats
 
         for i in range(n_nodes):
-            self.nodes.append(BullyNode(env, i, sim_stats, delay_mean, delay_q))
+            self.nodes.append(BullyNode(env, i, sim_stats, len(sim_stats.runtimes), delay_mean, delay_q))
 
         # pass the peers to the nodes
         for i in range(n_nodes):
@@ -69,7 +69,9 @@ class BullySimulation(Simulation):
                 self.env.process(initiators[i].unreliable_receive())
 
         # wait for finish_event to be triggered (means that election ended)
-        yield self.finish_event
+        result = yield self.finish_event
+        if result < 0:
+            self.sim_stats.add_wrong_sim()
         self.t_time = self.env.now
         # stat counter
         self.sim_stats.add_runtime(self.env.now)
@@ -77,17 +79,3 @@ class BullySimulation(Simulation):
         if debug_mode:
             print("\n\033[1;94mBully election algorithm terminated")
             print("\n------------------------------------------------\033[0m\n")
-    '''
-    def clean(self, env):
-        # reset nodes, env and t_time
-        super().clean(env)
-
-        self.n_nodes = n_nodes
-        self.delay_mean = delay_mean
-        for i in range(self.n_nodes):
-            self.nodes.append(BullyNode(env, i))
-
-        # pass the peers to the nodes
-        for i in range(self.n_nodes):
-            self.nodes[i].obtain_peers(self.nodes)
-    '''

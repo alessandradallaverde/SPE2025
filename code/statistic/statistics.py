@@ -27,7 +27,7 @@ class SimStats:
         self.timeout = timeout
         self.loss_rate = loss_rate
         self.name = name
-        self.unreliable=unreliable
+        self.unreliable = unreliable
 
         self.runtimes = []
         self.msg_counter = []

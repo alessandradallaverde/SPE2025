@@ -8,14 +8,14 @@ import matplotlib.pyplot as plt
 # ------------------- SETTINGS ---------------------
 N_NODES = 10
 DELAY = 110         # mean of exponential distribution for delays 
-INITIATORS = 10
+INITIATORS = 1
 N_SIM = 10000
 LOSS = 0.1
 UNRELIABLE = False
-DELAY_Q = 0.8        # quantile of exponential distribution
+DELAY_Q = 0.99        # quantile of exponential distribution
 
 sim_manager = StatsManager()
-'''
+
 # ------------ RING ALGORITHM SIMULATION ------------
 stats_ring = SimStats(INITIATORS, DELAY, N_NODES, "Ring")
 stats_ring.set_id(len(sim_manager.stats))
@@ -33,7 +33,7 @@ for i in range(N_SIM):
     env_ring = simpy.Environment()
     ring.clean(env_ring)            # clean RingSimulation for the next simulation
 
-#stats_ring.remove_outliers()
+stats_ring.remove_outliers()
 stats_ring.compute_mean_rtt()
 stats_ring.compute_var_rtt()
 stats_ring.compute_ci_rtt()
@@ -63,7 +63,6 @@ for i in range (N_SIM):
     bully.env = env_bully
 
 stats_bully.plot_runtimes_box_plot()
-# stats_bully.check_wrong_sim()
 stats_bully.remove_outliers()
 stats_bully.compute_mean_rtt()
 stats_bully.compute_var_rtt()
@@ -76,9 +75,10 @@ stats_bully.compute_ci_msg()
 stats_bully.plot_runtimes_hist(200)     
 stats_bully.plot_runtimes_box_plot()
 print(stats_bully)
-'''
+
+
 # ------------ BULLY VS RING -----------
-#sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
+sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
 
 
 # ------------ MULTIFACTORS ANALYSIS -------------
@@ -94,16 +94,13 @@ print(stats_bully)
 #       unreliable - boolean value, if true we are under the unreliable links assumption
 def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreliable):
     ids = []            # ids of each pack of simulations in the sim_manager
-    mean_rtt = []
-    mean_msg = []
-    ci_rtt = []
-    ci_msg = []
+
     for i in range(tot_sims):
         # simulations configuration
         name = f"Bully" if bully else f"Ring"
         stats = SimStats(n_init[i], n_delays[i], n_n[i], name)
         if unreliable:
-            stats.set_loss(round(1-n_loss[i],2))
+            stats.set_loss(round(n_loss[i],2))
         stats.set_id(len(sim_manager.stats))
         sim_manager.insert_stat(stats)
         ids.append(stats.id)
@@ -123,7 +120,7 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
                 bully.env = env
         else:
             if unreliable:          # ring simulations
-                ring = RingSimulation(env, n_n[i], n_delays[i], stats, n_initiators=n_init[i],unreliable=True, loss=n_loss[i], timeout=DELAY_Q)
+                ring = RingSimulation(env_ring, n_n[i], n_delays[i], stats, n_initiators=n_init[i],unreliable=True, loss=n_loss[i], timeout=DELAY_Q)
             else:
                 ring = RingSimulation(env, n_n[i], n_delays[i], stats, n_initiators=n_init[i], unreliable=False)
 
@@ -140,35 +137,16 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
         stats.compute_var_msg()
         stats.compute_ci_msg()
 
-        mean_rtt.append(stats.mean_rtt)
-        mean_msg.append(stats.mean_msg)
-        ci_rtt.append(stats.err_rtt)
-        ci_msg.append(stats.err_msg)
+    sim_manager.cmp_runtimes(ids, 200, sim_name)            # plot simulations results
 
-    mean_rtt = np.array(mean_rtt)
-    mean_msg = np.array(mean_msg)
-    ci_rtt = np.array(ci_rtt)
-    ci_msg = np.array(ci_msg)
-    
-    #print(mean_rtt, ci_rtt, mean_msg, ci_msg)
-    fig, ax = plt.subplots()
-    ax.plot(n_n, mean_rtt)
-    ax.fill_between(n_n, (mean_rtt-ci_rtt), (mean_rtt+ci_rtt), color='b', alpha=.1)
-
-    fig, ax = plt.subplots()
-    ax.plot(n_n, mean_msg)
-    ax.fill_between(n_n, (mean_msg-ci_msg), (mean_msg+ci_msg), color='b', alpha=.1)
-
-    #sim_manager.cmp_runtimes(ids, 200, sim_name)            # plot simulations results
-
-tot_sims = 16
+tot_sims = 3
 sim_title = "Packet Loss Rate"
-n_init = [1]*tot_sims
-import numpy as np
-n_n = np.arange(5, 21, 1, dtype=int)
+n_init = [INITIATORS]*tot_sims
+n_n = [N_NODES]*tot_sims
 n_delays = [DELAY]*tot_sims
-n_loss = [-1]*tot_sims
-factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=True, unreliable=False)
+n_loss = [0.1, 0.2, 0.5]
+
+#factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
 
 # ------------ SHOW PLOTS ----------------
 plt.show()
