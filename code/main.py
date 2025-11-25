@@ -6,13 +6,13 @@ from statistic.statistics import SimStats, StatsManager
 import matplotlib.pyplot as plt
 
 # ------------------- SETTINGS ---------------------
-N_NODES = 4
+N_NODES = 10
 DELAY = 110         # mean of exponential distribution for delays 
 INITIATORS = 1
 N_SIM = 10000
-LOSS = 0.8
+LOSS = 0.1
 UNRELIABLE = False
-DELAY_Q = 0.8         # quantile of exponential distribution
+DELAY_Q = 0.99        # quantile of exponential distribution
 
 sim_manager = StatsManager()
 
@@ -22,7 +22,7 @@ stats_ring.set_id(len(sim_manager.stats))
 sim_manager.insert_stat(stats_ring)
 env_ring = simpy.Environment()
 if UNRELIABLE:          #unreliable links
-    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS, unreliable=True, loss=LOSS, timeout=DELAY_Q)
+    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS,unreliable=True, loss=LOSS, timeout=DELAY_Q)
     stats_ring.set_loss(LOSS)
 else:           #reliable links
     ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring)          
@@ -34,9 +34,9 @@ for i in range(N_SIM):
     ring.clean(env_ring)            # clean RingSimulation for the next simulation
 
 stats_ring.remove_outliers()
-stats_ring.compute_mean()
-stats_ring.compute_var()
-stats_ring.compute_ci()
+stats_ring.compute_mean_rtt()
+stats_ring.compute_var_rtt()
+stats_ring.compute_ci_rtt()
 
 # ANALYZE TURNAROUND TIME
 stats_ring.plot_runtimes_hist(200)          # plot histogram of simulations    
@@ -62,15 +62,18 @@ for i in range (N_SIM):
     env_bully = simpy.Environment()
     bully.env = env_bully
 
+stats_bully.plot_runtimes_box_plot()
 stats_bully.remove_outliers()
-stats_bully.compute_mean()
-stats_bully.compute_var()
-stats_bully.compute_ci()
+stats_bully.compute_mean_rtt()
+stats_bully.compute_var_rtt()
+stats_bully.compute_ci_rtt()
+stats_bully.compute_mean_msg()
+stats_bully.compute_var_msg()
+stats_bully.compute_ci_msg()
 
 # ANALYZE TURNAROUND TIME
 stats_bully.plot_runtimes_hist(200)     
 stats_bully.plot_runtimes_box_plot()
-
 print(stats_bully)
 
 
@@ -127,9 +130,12 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
                 env = simpy.Environment()
                 ring.clean(env)
 
-        stats.compute_mean()
-        stats.compute_var()
-        stats.compute_ci()
+        stats.compute_mean_rtt()
+        stats.compute_var_rtt()
+        stats.compute_ci_rtt()
+        stats.compute_mean_msg()
+        stats.compute_var_msg()
+        stats.compute_ci_msg()
 
     sim_manager.cmp_runtimes(ids, 200, sim_name)            # plot simulations results
 

@@ -7,7 +7,7 @@ from simpy import Store, core, AnyOf
 # this class represents a node in the bully algorithm execution
 class BullyNode(Node):
 
-    def __init__(self, env, id, sim_stats, delay_mean, delay_q):
+    def __init__(self, env, id, sim_stats, sim_id, delay_mean, delay_q):
         super().__init__(env, id,)
         self.elected = -1
         self.el_in_progress = False
@@ -18,6 +18,7 @@ class BullyNode(Node):
         self.delay_mean = delay_mean
         # reference to sim_stat class to record all statistics during simulation
         self.sim_stats = sim_stats
+        self.sim_id = sim_id
 
     def reliable_send(self, type, dest_id):
         
@@ -28,6 +29,8 @@ class BullyNode(Node):
             if self.debug_mode:
                 print(f"Time {self.env.now:.2f}: Node {self.id} sends {type} to node {dest_id}")
 
+            # increase message counter
+            self.sim_stats.add_msg(self.sim_id)
             yield self.env.timeout(delay(self.delay_mean))
             # send the message
             yield self.peers[dest_id].queue.put(election_msg)
@@ -86,8 +89,10 @@ class BullyNode(Node):
             # if active, set election status of node
             self.el_in_progress = False
             # if election terminated trigger finish event
-            if self.finished():
-                self.finish.succeed()
+            is_finished, electee = self.finished()
+            if is_finished:
+                # set value of event
+                self.finish.succeed(electee)
                 raise core.StopSimulation("")
 
     # UNRELIABLE SEND/RECEIVE FUNCTIONS ---------------------------------------------------------------------------
@@ -103,6 +108,8 @@ class BullyNode(Node):
 
             # is packet lost?
             if random.uniform(0, 1) > self.loss_rate:
+                # increase message counter
+                self.sim_stats.add_msg(self.sim_id)
                 yield self.env.timeout(delay(self.delay_mean))
                 # send the message
                 yield self.peers[dest_id].queue.put(election_msg)
@@ -210,12 +217,24 @@ class BullyNode(Node):
             # set timeout /wait for anwers
             yield AnyOf(self.env, [self.wait_msg, self.env.timeout(2 * self.max_wait)])
 
-    # returns True if all nodes decided on coordinator
+    # returns array with two values:
+    # - first: is True if all nodes decided on coordinator
+    # - second: is an integer (-1 = different coordinators, otherwise it indicates the node that was elected)
     def finished(self):
+        electee = -2
         for i in range(len(self.peers)):
-            if self.peers[i].elected == -1 and not self.peers[i].crashed:  # count only non crashed processes
-                return False
-        return True
+            if not self.peers[i].crashed:           # count only non crashed processes
+                if self.peers[i].elected == -1:  
+                    return [False, -1]
+                else:
+                    # check that all nodes elected the same coordinator
+                    if electee == -2:
+                        electee = self.peers[i].elected
+                    elif electee != -1:
+                        if electee != self.peers[i].elected :
+                            electee = -1
+
+        return [True, electee]
 
     # resets node to default status
     def reset(self, env):
@@ -229,6 +248,8 @@ class BullyNode(Node):
         self.wait_msg = env.event()
         # ID of greatest node that gave OK
         self.max_active_id = -1
+        # for sim stats
+        self.sim_id  = len(self.sim_stats.msg_counter)
     
     # sets wether election happens with reliable or unreliable links with a network packet loss rate and if debug messages are activated
     def set_behaviour(self, loss_rate, debug_mode = False):
