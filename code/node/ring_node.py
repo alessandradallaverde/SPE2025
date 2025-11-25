@@ -80,7 +80,7 @@ class RingNode(Node):
         while not self.crashed:
             msg = yield self.queue.get()        # the get waits until there is something in the store
 
-            if self.unreliable and random.uniform(0,1) > self.loss and msg.sender!=-1:    # unreliable links
+            if self.unreliable and random.uniform(0,1) < self.loss and msg.sender!=-1:    # unreliable links
                 continue      
 
             if self.debug_mode:
