@@ -2,8 +2,11 @@ import random
 from scipy.stats import expon
 
 # create an exponential delay
-def delay(mean):
-    return random.expovariate(1/mean)
+def delay(mean, rng = None):
+    if rng==None:
+        return random.expovariate(1/mean)
+    else:
+        return rng.expovariate(1/mean)
 
 # compares two integers
 def cmp(a, b):
