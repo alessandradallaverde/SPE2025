@@ -159,7 +159,7 @@ class BullyNode(Node):
                         yield self.env.process(self.retransmit("COORDINATOR"))
                         # election of group terminated trigger finish event
                         self.elected = self.id
-                        self.finish.succeed()
+                        self.finish.succeed(self.id)
                         raise core.StopSimulation("") 
 
             else:    
