@@ -19,7 +19,7 @@ class BullySimulation(Simulation):
         self.sim_stats = sim_stats
 
         for i in range(n_nodes):
-            self.nodes.append(BullyNode(env, i, sim_stats, len(sim_stats.runtimes), delay_mean, delay_q))
+            self.nodes.append(BullyNode(env, i, sim_stats, -1, delay_mean, delay_q))
 
         # pass the peers to the nodes
         for i in range(n_nodes):
@@ -34,6 +34,7 @@ class BullySimulation(Simulation):
             return
 
         # restore all nodes default status
+        self.sim_stats.clear_delays(len(self.sim_stats.msg_counter)-1)
         for i in range(len(self.nodes)):
             self.nodes[i].reset(self.env)
             self.nodes[i].set_behaviour(loss_rate, debug_mode)

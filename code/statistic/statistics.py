@@ -3,6 +3,9 @@ from numpy import random
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as st
+from collections import Counter
+
+# TODO: need to decide how to manage delays
 
 # this class represents the statistics for multiple simulations of an election
 # algorithm with the same factors
@@ -11,26 +14,35 @@ import scipy.stats as st
 #       initiators - number of initiators
 #       delay - delay (exponential mean) chosen for the simulation
 #       n_nodes - number of nodes in the net
-#       timeout - timeout for messages under unreliable links condition
-#       loss_rate - prob. that a message isn't received under unreliable links condition
 #       name - name of the simulation
-#       id - id of the simulation
+#       unreliable - if true, the simulation assumes unreliable links
+#       timeout - quantile of exponential distribution to set the timeout
+#       loss_rate - prob. that a message isn't received under unreliable links condition
 #       runtimes - list containing runtime/turnaround time for each simulation
-#       mean - mean of the runtimes
-#       var - var of the runtimes
-#       err - err of the runtimes
+#       msg_counter - list of the number of messages
+#       id - id of the simulation
+#       current_sim - number of the algorithm execution
+#       mean_rtt - mean of the runtimes
+#       mean_msg - mean of the number of messages 
+#       var_rtt - var of the runtimes
+#       var_msg - var of the number of messages
+#       err_rtt - err of the runtimes
+#       err_msg - err of the number of messages
+#       self.wrong_sims - list of runtimes of wrong simulations (only for reliable bully)
 class SimStats:
     def __init__(self, initiators, delay, n_nodes, name, unreliable = False, timeout=-1, loss_rate=-1):
         self.initiators = initiators
         self.delay = delay
         self.n_nodes = n_nodes
-        self.timeout = timeout
-        self.loss_rate = loss_rate
         self.name = name
         self.unreliable = unreliable
-
+        self.timeout = timeout
+        self.loss_rate = loss_rate
+        
         self.runtimes = []
         self.msg_counter = []
+        self.delays_hist = []
+        self.delays = []
         self.id = -1
 
         self.mean_rtt = 0
@@ -65,9 +77,18 @@ class SimStats:
     def set_id(self, id):
         self.id = id
 
+    # method to set the loss rate
+    #   params:
+    #       loss - loss rate
     def set_loss(self, loss):
         self.loss_rate=loss
         self.unreliable=True
+
+    # method to set the timeout
+    #   params:
+    #       timeout - quantile of exponential distribution to set the timeout
+    def set_timeout(self, timeout):
+        self.timeout = timeout
 
     # add the turnaround time to the list
     #   params:
@@ -78,19 +99,34 @@ class SimStats:
     # increase counter message
     #   params:
     #       id - simulation index
-    def add_msg(self, id):
-        if len(self.msg_counter) <= id:
+    def add_msg(self, id, delay):
+        if id >= len(self.msg_counter):
             self.msg_counter.insert(id, 0)
         self.msg_counter[id] += 1
+        self.delays.append(delay)
+
+    # method to clear delays list and save histogram information
+    def clear_delays(self, sim_id=-1):
+        if sim_id < len(self.msg_counter) and sim_id >= 0:
+            # TODO: decide how to set the bins
+            bins_msg = round(self.msg_counter[sim_id]/2)        
+
+            counts, bins = np.histogram(self.delays, bins=bins_msg)
+            counts_d, bins_d = np.histogram(self.delays, bins=bins_msg, density=True)
+            self.delays_hist.append((counts, bins, counts_d, bins_d))         
+
+            self.delays.clear()     # clear the delays list for the next simulation
+
 
     # add index of simulation to the wrong simulations counter
     def add_wrong_sim(self):
         self.wrong_sims.append(len(self.runtimes))
 
-    # return the list of runtimes
+    # method to return the list of runtimes
     def get_runtimes(self):
         return self.runtimes
 
+    # method to check the rate of wrong simulations of the reliable bully
     def check_wrong_sim(self, whis = 1.5):
         # follows boxplot where outliers are outside the "whiskers"
         q_1 =  np.quantile(self.runtimes, 0.25)
@@ -117,15 +153,12 @@ class SimStats:
     # computes mean
     #   params:
     #       stat_arr - reference to array to compute the mean of
-    #   returns:
-    #       mean     - mean of stat_arr
     def compute_mean(self, stat_arr):
         mean = 0
         for el in stat_arr:
             mean += el
 
         return mean/len(stat_arr)
-
 
     # computes variance of runtimes
     def compute_var_rtt(self):
@@ -139,8 +172,6 @@ class SimStats:
     #   params:
     #       stat_arr  - reference to array to compute the variance of
     #       stat_mean - mean of given array
-    #   returns:
-    #       var       - variance of stat_arr
     def compute_var(self, stat_arr, stat_mean):
         var = 0
         for el in stat_arr:
@@ -160,8 +191,6 @@ class SimStats:
     #   params:
     #       var       - variance of array to compute ci for
     #       n         - length of array to compute ci for
-    #   returns:
-    #       err       - ci
     def compute_ci(self, var, n):
         return 1.96 * math.sqrt(var / n)
 
@@ -180,6 +209,8 @@ class SimStats:
         plt.axvline(x = self.mean_rtt, color = 'red', label = 'Mean')
         plt.legend()
 
+    # method to plot the histogram of the simulation runtimes and the gamma 
+    # distribution 
     def plot_ring_distribution(self, bins):
         plt.figure()
         plt.hist(self.runtimes, bins=bins, label = "Ring - Simulations with Reliable Links", density = True)
@@ -200,10 +231,51 @@ class SimStats:
         plt.boxplot(self.runtimes, tick_labels=[self.name])
         plt.title(self.name+" - Box Plot")
         plt.ylabel("Turnaround Time")
+
+    # method to plot the histogram of the delays for a given simulation
+    #   params:
+    #       sim_index - index of the simulation
+    #       density - if true, it plots the density
+    def plot_delays_hist_single(self, sim_index, density = False):
+        if sim_index >= len(self.delays_hist): return     
+
+        plt.figure()
+        if density:
+            plt.stairs(self.delays_hist[sim_index][2], self.delays_hist[sim_index][3])
+            plt.title(self.name+" - Delays Histogram")
+            plt.ylabel("Count")
+        else:
+            plt.stairs(self.delays_hist[sim_index][0], self.delays_hist[sim_index][1])
+            plt.title(self.name+" - Delays Density")
+            plt.ylabel("Density")
+
+        plt.xlabel("Delay")
+
+    def plot_msg_vs_rtt(self, sim_index, bins):
+        title = self.name+" - Msg vs. Runtime"
+        fig, axs = plt.subplots(1,2)
+        fig.suptitle(title)
+        
+        axs[0].hist(self.runtimes, bins=bins)
+        rel = "Unreliable" if self.unreliable else "Reliable"
+        axs[0].set_title(self.name+" - "+rel+" Links")
+        axs[0].set_xlabel("Runtime [ms]")
+        axs[0].set_ylabel("#sim")
+
+        counts = Counter(self.msg_counter)
+        counts = dict(sorted(counts.items()))
+        axs[1].plot(counts.keys(), counts.values(), linestyle='dotted')
+        axs[1].set_title(self.name+" - Msg Histogram")
+        axs[1].set_xlabel("#msg")
+        axs[1].set_ylabel("Counts")
     
-    # method to remove outliers datapoints from runtimes and msg 
+    # method to remove outliers data points from runtimes and msg 
     def remove_outliers(self, whis = 1.5):
         # follows boxplot where outliers are outside the "whiskers"
+
+        if len(self.runtimes) == 0:
+            print("Warning: no runtimes available to remove outliers.")
+            return
         q_1 =  np.quantile(self.runtimes, 0.25)
         q_3 = np.quantile(self.runtimes, 0.75)
         bound_1 = q_1 - whis * (q_3 - q_1)
@@ -216,15 +288,13 @@ class SimStats:
 
         self.runtimes = list(filter(not_outlier, self.runtimes))
 
-        # TO DO: this line is needed because ring does not compute msg number
-        if (len(self.msg_counter) != 0):
-            q_1 =  np.quantile(self.msg_counter, 0.25)
-            q_3 = np.quantile(self.msg_counter, 0.75)
-            bound_1 = q_1 - whis * (q_3 - q_1)
-            bound_2 = q_3 + whis * (q_3 - q_1)
-            self.msg_counter = list(filter(not_outlier, self.msg_counter))
+        q_1 =  np.quantile(self.msg_counter, 0.25)
+        q_3 = np.quantile(self.msg_counter, 0.75)
+        bound_1 = q_1 - whis * (q_3 - q_1)
+        bound_2 = q_3 + whis * (q_3 - q_1)
+        self.msg_counter = list(filter(not_outlier, self.msg_counter))
 
-
+    '''
     # method to compute bootstrap ci
     # parameters:
     # ci_level          ->  confidence level
@@ -246,6 +316,7 @@ class SimStats:
         # sort
         boot_stat.sort()
         return (boot_stat[r0], boot_stat[R + 1 -r0])
+    '''
 
 # this class represents the statistics result of different simulation with 
 # different factors, it is used to create plots/further analysis and to 
@@ -270,7 +341,13 @@ class StatsManager:
         plt.boxplot([self.stats[id1].runtimes, self.stats[id2].runtimes], labels=labels)
         plt.title("Box Plots")
         plt.ylabel("Turnaround Time")
-
+    
+    # method to show different simulations runtimes based on the factor that 
+    # changed
+    #   params:
+    #       ids - index of the simulation contained in the stats attribute
+    #       bins - number of the bins for the histogram
+    #       name - title of the simulation comparison
     def cmp_runtimes(self, ids, bins, name):
 
         title = "Simulations Comparison - "+name
@@ -298,6 +375,7 @@ class StatsManager:
             axs[i].legend(loc="best")
             axs[i].axvline(x=sim.mean_rtt)
     
+    # method to remove all the outliers from each simulation
     def remove_all_outliers(self):
         for i in range(len(self.stats)):
             self.stats[i].remove_outliers()

@@ -28,5 +28,5 @@ class Simulation:
     # number of nodes
     def clean(self, env):
         self.env = env
-        self.nodes = []
+        self.nodes.clear()
         self.t_time = 0

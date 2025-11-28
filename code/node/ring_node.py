@@ -18,16 +18,18 @@ import utils
 #       - debug_mode -> if true the nodes and this class will print debug messages
 class RingNode(Node):
 
-    def __init__(self, env, id, delay_mean, unreliable, debug_mode, loss, timeout, rng):
+    def __init__(self, env, id, delay_mean, unreliable, debug_mode, loss, timeout, rng, id_stats, sim_stats):
        super().__init__(env, id)
        self.delay_mean = delay_mean
-       self.unreliable = unreliable;
+       self.unreliable = unreliable
        self.debug_mode=debug_mode
        self.loss=loss
        self.timeout=timeout
        self.crashed=False
        self.initiator=False
        self.rng = rng           # debug
+       self.id_stats = id_stats
+       self.sim_stats = sim_stats
        
        self.env.process(self.receive())     # the node can receive and manage messages
 
@@ -47,6 +49,7 @@ class RingNode(Node):
 
             if self.unreliable: msg.set_event(self.env.event())
             delay = utils.delay(self.delay_mean, rng=self.rng)
+            self.sim_stats.add_msg(self.id_stats, delay)
             yield self.env.timeout(delay)
             next = self.find_next()     # find the next active neighbor
             yield self.peers[next].queue.put(msg)       # send the message 
@@ -72,7 +75,9 @@ class RingNode(Node):
         if self.debug_mode: 
             print(f"Time {self.env.now:.2f}: Node {self.id} sends {msg.type} to node {receiver}")
         
-        yield self.env.timeout(utils.delay(self.delay_mean, rng=self.rng))
+        delay = utils.delay(self.delay_mean, rng=self.rng)
+        self.sim_stats.add_msg(self.id_stats, delay)
+        yield self.env.timeout(delay)
         yield self.peers[receiver].queue.put(msg)       # send the ack
 
     # this method is used to manage incoming messages

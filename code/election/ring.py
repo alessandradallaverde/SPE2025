@@ -28,11 +28,12 @@ class RingSimulation(Simulation):
         self.unreliable = unreliable
         self.loss=loss
         self.timeout = max_delay(timeout, delay_mean)
+        self.stats_id = 0
         self.debug_mode = debug_mode
         self.rng = rng          # debug
 
         for i in range(n_nodes):        # create nodes with IDs i = 0, 1, 2, ...
-            self.nodes.append(RingNode(env, i, delay_mean, self.unreliable, debug_mode, loss, self.timeout, self.rng))
+            self.nodes.append(RingNode(env, i, delay_mean, self.unreliable, debug_mode, loss, self.timeout, self.rng, self.stats_id, sim_stats))
 
         for i in range(n_nodes):        # pass the peers to the nodes
             self.nodes[i].obtain_peers(self.nodes)
@@ -87,9 +88,11 @@ class RingSimulation(Simulation):
     def clean(self, env):
         super().clean(env)
         self.finish_event = self.env.event()
-
+        self.sim_stats.clear_delays(self.stats_id)
+        self.stats_id += 1
+        
         for i in range(self.n_nodes):
-            self.nodes.append(RingNode(self.env, i, self.delay_mean, self.unreliable, self.debug_mode, self.loss, self.timeout, self.rng))
+            self.nodes.append(RingNode(self.env, i, self.delay_mean, self.unreliable, self.debug_mode, self.loss, self.timeout, self.rng, self.stats_id, self.sim_stats))
             
         # pass the peers to the nodes
         for i in range(self.n_nodes):

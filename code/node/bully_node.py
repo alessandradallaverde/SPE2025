@@ -30,8 +30,9 @@ class BullyNode(Node):
                 print(f"Time {self.env.now:.2f}: Node {self.id} sends {type} to node {dest_id}")
 
             # increase message counter
-            self.sim_stats.add_msg(self.sim_id)
-            yield self.env.timeout(delay(self.delay_mean))
+            msg_delay = delay(self.delay_mean)
+            self.sim_stats.add_msg(self.sim_id, msg_delay)
+            yield self.env.timeout(msg_delay)
             # send the message
             yield self.peers[dest_id].queue.put(election_msg)
             self.env.process(self.peers[dest_id].reliable_receive())
@@ -109,8 +110,9 @@ class BullyNode(Node):
             # is packet lost?
             if random.uniform(0, 1) > self.loss_rate:
                 # increase message counter
-                self.sim_stats.add_msg(self.sim_id)
-                yield self.env.timeout(delay(self.delay_mean))
+                msg_delay = delay(self.delay_mean)
+                self.sim_stats.add_msg(self.sim_id, msg_delay)
+                yield self.env.timeout(msg_delay)
                 # send the message
                 yield self.peers[dest_id].queue.put(election_msg)
                 self.env.process(self.peers[dest_id].unreliable_receive())
@@ -249,7 +251,8 @@ class BullyNode(Node):
         # ID of greatest node that gave OK
         self.max_active_id = -1
         # for sim stats
-        self.sim_id  = len(self.sim_stats.msg_counter)
+        self.sim_id+=1
+        
     
     # sets wether election happens with reliable or unreliable links with a network packet loss rate and if debug messages are activated
     def set_behaviour(self, loss_rate, debug_mode = False):

@@ -6,13 +6,13 @@ from statistic.statistics import SimStats, StatsManager
 import matplotlib.pyplot as plt
 
 # ------------------- SETTINGS ---------------------
-N_NODES = 10
+N_NODES = 5
 DELAY = 110         # mean of exponential distribution for delays 
 INITIATORS = 1
 N_SIM = 10000
 LOSS = 0.1
 UNRELIABLE = False
-DELAY_Q = 0.99        # quantile of exponential distribution
+DELAY_Q = 0.99       # quantile of exponential distribution
 
 sim_manager = StatsManager()
 
@@ -24,6 +24,7 @@ env_ring = simpy.Environment()
 if UNRELIABLE:          #unreliable links
     ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS,unreliable=True, loss=LOSS, timeout=DELAY_Q)
     stats_ring.set_loss(LOSS)
+    stats_ring.set_timeout(DELAY_Q)
 else:           #reliable links
     ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring)          
 
@@ -37,15 +38,20 @@ stats_ring.remove_outliers()
 stats_ring.compute_mean_rtt()
 stats_ring.compute_var_rtt()
 stats_ring.compute_ci_rtt()
+stats_ring.compute_mean_msg()
+stats_ring.compute_var_msg()
+stats_ring.compute_ci_msg()
 
 # ANALYZE TURNAROUND TIME
-stats_ring.plot_runtimes_hist(200)          # plot histogram of simulations    
-stats_ring.plot_runtimes_box_plot()         # plot box plot of simulation
+# stats_ring.plot_runtimes_hist(200)          # plot histogram of simulations    
+# stats_ring.plot_runtimes_box_plot()         # plot box plot of simulation
+# stats_ring.plot_delays_hist_single(0)
+# stats_ring.plot_msg_vs_rtt(0,200)
 
 print(stats_ring)           # print simulations results (mean, var, ci)
 
 # ------------ BULLY ALGORITHM SIMULATION -----------
-stats_bully = SimStats(INITIATORS, DELAY, N_NODES, "Bully")
+stats_bully = SimStats(INITIATORS, DELAY, N_NODES, "Bully", timeout=DELAY_Q)
 if UNRELIABLE:
     stats_bully.set_loss(LOSS)
 stats_bully.set_id(len(sim_manager.stats))
@@ -62,7 +68,6 @@ for i in range (N_SIM):
     env_bully = simpy.Environment()
     bully.env = env_bully
 
-stats_bully.plot_runtimes_box_plot()
 stats_bully.remove_outliers()
 stats_bully.compute_mean_rtt()
 stats_bully.compute_var_rtt()
@@ -72,14 +77,15 @@ stats_bully.compute_var_msg()
 stats_bully.compute_ci_msg()
 
 # ANALYZE TURNAROUND TIME
-stats_bully.plot_runtimes_hist(200)     
-stats_bully.plot_runtimes_box_plot()
+# stats_bully.plot_runtimes_hist(200)     
+# stats_bully.plot_runtimes_box_plot()
+# stats_bully.plot_delays_hist(0)
+# stats_bully.plot_msg_vs_rtt(0,200)
+
 print(stats_bully)
 
-
 # ------------ BULLY VS RING -----------
-sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
-
+# sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
 
 # ------------ MULTIFACTORS ANALYSIS -------------
 
@@ -101,6 +107,7 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
         stats = SimStats(n_init[i], n_delays[i], n_n[i], name)
         if unreliable:
             stats.set_loss(round(n_loss[i],2))
+            stats.set_timeout(DELAY_Q)
         stats.set_id(len(sim_manager.stats))
         sim_manager.insert_stat(stats)
         ids.append(stats.id)
@@ -137,6 +144,7 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
         stats.compute_var_msg()
         stats.compute_ci_msg()
 
+    sim_manager.remove_all_outliers()
     sim_manager.cmp_runtimes(ids, 200, sim_name)            # plot simulations results
 
 tot_sims = 3
@@ -146,7 +154,7 @@ n_n = [N_NODES]*tot_sims
 n_delays = [DELAY]*tot_sims
 n_loss = [0.1, 0.2, 0.5]
 
-#factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
+# factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=True, unreliable=True)
 
 # ------------ SHOW PLOTS ----------------
 plt.show()
