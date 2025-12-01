@@ -12,7 +12,8 @@ INITIATORS = 1
 N_SIM = 10000
 LOSS = 0.1
 UNRELIABLE = False
-DELAY_Q = 0.99       # quantile of exponential distribution
+DELAY_Q_R = 0.99       # quantile of exponential distribution
+DELAY_Q = 0.8
 
 sim_manager = StatsManager()
 
@@ -26,7 +27,7 @@ if UNRELIABLE:          #unreliable links
     stats_ring.set_loss(LOSS)
     stats_ring.set_timeout(DELAY_Q)
 else:           #reliable links
-    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring)          
+    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS)          
 
 for i in range(N_SIM):
     env_ring.process(ring.start_election())
@@ -51,13 +52,16 @@ stats_ring.compute_ci_msg()
 print(stats_ring)           # print simulations results (mean, var, ci)
 
 # ------------ BULLY ALGORITHM SIMULATION -----------
-stats_bully = SimStats(INITIATORS, DELAY, N_NODES, "Bully", timeout=DELAY_Q)
-if UNRELIABLE:
-    stats_bully.set_loss(LOSS)
+stats_bully = SimStats(INITIATORS, DELAY, N_NODES, "Bully")
 stats_bully.set_id(len(sim_manager.stats))
 sim_manager.insert_stat(stats_bully)
 env_bully = simpy.Environment()
-bully = BullySimulation(env_bully, N_NODES, DELAY, DELAY_Q, stats_bully)
+if UNRELIABLE:
+    stats_bully.set_loss(LOSS)
+    stats_bully.set_timeout(DELAY_Q)
+    bully = BullySimulation(env_bully, N_NODES, DELAY, DELAY_Q, stats_bully)
+else:
+    bully = BullySimulation(env_bully, N_NODES, DELAY, DELAY_Q_R, stats_bully)
 
 for i in range (N_SIM):
     if UNRELIABLE:
@@ -115,7 +119,10 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
         # core of simulations
         env = simpy.Environment()
         if bully:           # bully simulations
-            bully = BullySimulation(env, n_n[i], n_delays[i], DELAY_Q, stats)
+            if unreliable:
+                bully = BullySimulation(env, n_n[i], n_delays[i], DELAY_Q, stats)
+            else:
+                bully = BullySimulation(env, n_n[i], n_delays[i], DELAY_Q_R, stats)
 
             for j in range (N_SIM):
                 if unreliable:
@@ -127,7 +134,7 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
                 bully.env = env
         else:
             if unreliable:          # ring simulations
-                ring = RingSimulation(env_ring, n_n[i], n_delays[i], stats, n_initiators=n_init[i],unreliable=True, loss=n_loss[i], timeout=DELAY_Q)
+                ring = RingSimulation(env, n_n[i], n_delays[i], stats, n_initiators=n_init[i],unreliable=True, loss=n_loss[i], timeout=DELAY_Q)
             else:
                 ring = RingSimulation(env, n_n[i], n_delays[i], stats, n_initiators=n_init[i], unreliable=False)
 
@@ -137,6 +144,7 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
                 env = simpy.Environment()
                 ring.clean(env)
 
+        stats.remove_outliers()
         stats.compute_mean_rtt()
         stats.compute_var_rtt()
         stats.compute_ci_rtt()
@@ -144,7 +152,6 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
         stats.compute_var_msg()
         stats.compute_ci_msg()
 
-    sim_manager.remove_all_outliers()
     sim_manager.cmp_runtimes(ids, 200, sim_name)            # plot simulations results
 
 tot_sims = 3
@@ -154,7 +161,66 @@ n_n = [N_NODES]*tot_sims
 n_delays = [DELAY]*tot_sims
 n_loss = [0.1, 0.2, 0.5]
 
-# factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=True, unreliable=True)
+# factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
+
+# -------------- NUMBER OF NODES ANALYSIS ----------------
+
+def n_nodes_sim(max_n_nodes, bully = True, unreliable = False):
+    ids = []            # ids of each pack of simulations in the sim_manager
+
+    if max_n_nodes < 3: return 
+
+    for i in range(3, max_n_nodes):
+        # simulations configuration
+        name = f"Bully" if bully else f"Ring"
+        stats = SimStats(1, DELAY, i, name)
+        if bully: stats.set_timeout(DELAY_Q_R)
+        if unreliable:
+            stats.set_loss(round(LOSS, 2))
+            stats.set_timeout(DELAY_Q)
+        stats.set_id(len(sim_manager.stats))
+        sim_manager.insert_stat(stats)
+        ids.append(stats.id)
+
+        # core of simulations
+        env = simpy.Environment()
+        if bully:           # bully simulations
+            if unreliable:
+                bully = BullySimulation(env, i, DELAY, DELAY_Q, stats)
+            else:
+                bully = BullySimulation(env, i, DELAY, DELAY_Q_R, stats)
+
+            for j in range (N_SIM):
+                if unreliable:
+                    bully.env.process(bully.start_election(INITIATORS, LOSS)) 
+                else:
+                    bully.env.process(bully.start_election(INITIATORS))
+                bully.env.run()
+                env = simpy.Environment()
+                bully.env = env
+        else:
+            if unreliable:          # ring simulations
+                ring = RingSimulation(env, i, DELAY, stats, n_initiators=INITIATORS, unreliable=True, loss=LOSS, timeout=DELAY_Q)
+            else:
+                ring = RingSimulation(env, i, DELAY, stats, n_initiators=INITIATORS, unreliable=False)
+
+            for j in range(N_SIM):
+                env.process(ring.start_election())
+                env.run()
+                env = simpy.Environment()
+                ring.clean(env)
+
+        stats.remove_outliers()
+        stats.compute_mean_rtt()
+        stats.compute_var_rtt()
+        stats.compute_ci_rtt()
+        stats.compute_mean_msg()
+        stats.compute_var_msg()
+        stats.compute_ci_msg()
+
+    sim_manager.n_nodes_cmp(ids)
+
+# n_nodes_sim(8, bully=False, unreliable=True)
 
 # ------------ SHOW PLOTS ----------------
 plt.show()

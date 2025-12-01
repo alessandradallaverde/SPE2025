@@ -5,8 +5,6 @@ import numpy as np
 import scipy.stats as st
 from collections import Counter
 
-# TODO: need to decide how to manage delays
-
 # this class represents the statistics for multiple simulations of an election
 # algorithm with the same factors
 #
@@ -100,7 +98,7 @@ class SimStats:
     #   params:
     #       id - simulation index
     def add_msg(self, id, delay):
-        if id >= len(self.msg_counter):
+        if id == len(self.msg_counter):
             self.msg_counter.insert(id, 0)
         self.msg_counter[id] += 1
         self.delays.append(delay)
@@ -374,6 +372,35 @@ class StatsManager:
             axs[i].hist(sim.runtimes, bins=bins, color=color, label=sub_label)
             axs[i].legend(loc="best")
             axs[i].axvline(x=sim.mean_rtt)
+
+    def n_nodes_cmp(self, ids):
+
+        res_rtt = {}
+        res_msg = {}
+
+        for id in ids:
+            sim = self.stats[id]
+            res_rtt[sim.n_nodes] = sim.mean_rtt
+            res_msg[sim.n_nodes] = sim.mean_msg
+
+        rel = "Unreliable" if self.stats[ids[0]].unreliable else "Reliable"
+        title = "Number of Nodes Analysis - " + self.stats[ids[0]].name + " with " + rel + " Links"
+        fig, axs = plt.subplots(1,2)
+        fig.suptitle(title)
+        
+        res_rtt = dict(sorted(res_rtt.items()))
+        axs[0].plot(res_rtt.values(), res_rtt.keys())
+        axs[0].set_title("RTT vs. #nodes")
+        axs[0].set_xlabel("Runtime [ms]")
+        axs[0].set_ylabel("#nodes")
+
+        res_msg = dict(sorted(res_msg.items()))
+        axs[1].plot(res_msg.values(), res_msg.keys())
+        axs[1].set_title("#msg vs. #nodes")
+        axs[1].set_xlabel("#msg")
+        axs[1].set_ylabel("#nodes")
+
+
     
     # method to remove all the outliers from each simulation
     def remove_all_outliers(self):
