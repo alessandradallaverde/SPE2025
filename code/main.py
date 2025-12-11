@@ -6,16 +6,17 @@ from statistic.statistics import SimStats, StatsManager
 import matplotlib.pyplot as plt
 
 # ------------------- SETTINGS ---------------------
-N_NODES = 5
-DELAY = 110         # mean of exponential distribution for delays 
-INITIATORS = 1
+N_NODES = 8
+DELAY = 55         # mean of exponential distribution for delays 
+INITIATORS = 3
 N_SIM = 10000
-LOSS = 0.1
-UNRELIABLE = False
+LOSS = 0.5
+UNRELIABLE = True
 DELAY_Q_R = 0.99       # quantile of exponential distribution
 DELAY_Q = 0.8
 
 sim_manager = StatsManager()
+'''
 
 # ------------ RING ALGORITHM SIMULATION ------------
 stats_ring = SimStats(INITIATORS, DELAY, N_NODES, "Ring")
@@ -89,8 +90,9 @@ stats_bully.compute_ci_msg()
 print(stats_bully)
 
 # ------------ BULLY VS RING -----------
-# sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
 
+sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
+'''
 # ------------ MULTIFACTORS ANALYSIS -------------
 
 # This method plots different simulations results for different factors
@@ -155,13 +157,13 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
     sim_manager.cmp_runtimes(ids, 200, sim_name)            # plot simulations results
 
 tot_sims = 3
-sim_title = "Packet Loss Rate"
-n_init = [INITIATORS]*tot_sims
-n_n = [N_NODES]*tot_sims
+sim_title = "Initiators"
+n_init = [1, 3, 4]#*tot_sims
+n_n = [5]*tot_sims
 n_delays = [DELAY]*tot_sims
-n_loss = [0.1, 0.2, 0.5]
+n_loss = [0.2]*tot_sims
 
-# factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
+factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
 
 # -------------- NUMBER OF NODES ANALYSIS ----------------
 
@@ -219,7 +221,6 @@ def n_nodes_sim(max_n_nodes, bully = True, unreliable = False):
         stats.compute_ci_msg()
 
     sim_manager.n_nodes_cmp(ids)
-
 # n_nodes_sim(8, bully=False, unreliable=True)
 
 # ------------ SHOW PLOTS ----------------

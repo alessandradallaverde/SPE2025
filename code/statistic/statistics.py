@@ -349,7 +349,7 @@ class StatsManager:
     def cmp_runtimes(self, ids, bins, name):
 
         title = "Simulations Comparison - "+name
-        fig, axs = plt.subplots(len(ids))
+        fig, axs = plt.subplots(len(ids), sharex = True)
         fig.suptitle(title)
         
         for i, id in enumerate(ids):
