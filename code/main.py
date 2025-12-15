@@ -6,17 +6,16 @@ from statistic.statistics import SimStats, StatsManager
 import matplotlib.pyplot as plt
 
 # ------------------- SETTINGS ---------------------
-N_NODES = 8
-DELAY = 55         # mean of exponential distribution for delays 
-INITIATORS = 3
+N_NODES = 5
+DELAY = 110         # mean of exponential distribution for delays 
+INITIATORS = 1
 N_SIM = 10000
-LOSS = 0.5
+LOSS = 0.1
 UNRELIABLE = True
-DELAY_Q_R = 0.99       # quantile of exponential distribution
+DELAY_Q_R = 0.99       # quantile of exponential distribution for timeouts 
 DELAY_Q = 0.8
 
 sim_manager = StatsManager()
-'''
 
 # ------------ RING ALGORITHM SIMULATION ------------
 stats_ring = SimStats(INITIATORS, DELAY, N_NODES, "Ring")
@@ -92,7 +91,7 @@ print(stats_bully)
 # ------------ BULLY VS RING -----------
 
 sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
-'''
+
 # ------------ MULTIFACTORS ANALYSIS -------------
 
 # This method plots different simulations results for different factors

@@ -4,7 +4,7 @@
 #   - type -> a string representing the type of the message (coordinator or election)
 #   - transaction_id -> (unique) identifier of the messages exchanged during the same election 
 #   - sender -> message's sender
-class RingMsg:
+class RingMsg():
 
     def __init__(self, type, transaction_id, sender, event = None):
         self.type = type

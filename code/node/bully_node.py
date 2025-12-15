@@ -8,14 +8,13 @@ from simpy import Store, core, AnyOf
 class BullyNode(Node):
 
     def __init__(self, env, id, sim_stats, sim_id, delay_mean, delay_q):
-        super().__init__(env, id,)
+        super().__init__(env, id, delay_mean)
         self.elected = -1
         self.el_in_progress = False
         self.blocked = False
         self.missing_ack = []
         #   maximum wait is computed using the quantile given by delay_q (saved as attribute to reduce calls to scipy)
         self.max_wait = max_delay(delay_q, delay_mean)
-        self.delay_mean = delay_mean
         # reference to sim_stat class to record all statistics during simulation
         self.sim_stats = sim_stats
         self.sim_id = sim_id

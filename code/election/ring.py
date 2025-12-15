@@ -21,7 +21,7 @@ from utils import max_delay
 #       - nodes -> nodes of the network
 class RingSimulation(Simulation):
     
-    def __init__(self, env, n_nodes, delay_mean, sim_stats, n_initiators = 1, unreliable = False, loss=1.0, timeout=0.0, debug_mode=False, rng=None):
+    def __init__(self, env, n_nodes, delay_mean, sim_stats, n_initiators = 1, unreliable = False, loss=0.0, timeout=0.0, debug_mode=False, rng=None):
         super().__init__(env, n_nodes, delay_mean)
         self.sim_stats = sim_stats
         self.n_initiators = n_initiators

@@ -19,8 +19,7 @@ import utils
 class RingNode(Node):
 
     def __init__(self, env, id, delay_mean, unreliable, debug_mode, loss, timeout, rng, id_stats, sim_stats):
-       super().__init__(env, id)
-       self.delay_mean = delay_mean
+       super().__init__(env, id, delay_mean)
        self.unreliable = unreliable
        self.debug_mode=debug_mode
        self.loss=loss

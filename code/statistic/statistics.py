@@ -390,8 +390,8 @@ class StatsManager:
         
         res_rtt = dict(sorted(res_rtt.items()))
         axs[0].plot(res_rtt.values(), res_rtt.keys())
-        axs[0].set_title("RTT vs. #nodes")
-        axs[0].set_xlabel("Runtime [ms]")
+        axs[0].set_title("Turnaround Time vs. #nodes")
+        axs[0].set_xlabel("Turnaround Time [ms]")
         axs[0].set_ylabel("#nodes")
 
         res_msg = dict(sorted(res_msg.items()))

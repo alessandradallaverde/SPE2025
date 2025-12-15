@@ -10,12 +10,13 @@ from simpy import Store
 #       - elected -> id of the new coordinator
 class Node:
 
-    def __init__(self, env, id):
+    def __init__(self, env, id, delay_mean):
         self.id = id                                       
         self.queue = Store(env)
         self.crashed = False
         self.env = env
         self.elected = -1
+        self.delay_mean = delay_mean
 
     # method to se the peers
     def obtain_peers(self, peers):
