@@ -1,54 +1,63 @@
 import simpy
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.ticker as mtick
+from multiprocessing import Pool, cpu_count
+
 from election.bully import BullySimulation
-from election.ring import RingSimulation
-from statistic.statistics import SimStats, StatsManager
-import utils
+from statistic.statistics import SimStats
 
 # ------------------- SETTINGS ---------------------
-N_NODES = 4
+N_NODES = 5
 DELAY = 110         # mean of exponential distribution for delays 
 INITIATORS = 1
-N_SIM = 3
-LOSS = 0.8
-UNRELIABLE = True
-DELAY_Q = 0.7         # quantile of exponential distribution
-DEBUG = True
 
-sim_manager = StatsManager()
+# ------------ BULLY TIMEOUT ANALYSIS -------------
 
-max_delay = (2 * utils.max_delay(DELAY_Q, DELAY))
+def run_single_timeout(t):
 
-# ------------ RING ALGORITHM SIMULATION -----------
-stats_ring = SimStats(INITIATORS, DELAY, N_NODES, "Ring")
-stats_ring.set_loss(LOSS)
-stats_ring.set_id(len(sim_manager.stats))
-sim_manager.insert_stat(stats_ring)
-env_ring = simpy.Environment()
-if UNRELIABLE:          #unreliable links
-    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS, unreliable=True, loss=LOSS, timeout=0.8, debug_mode=True)
-    stats_ring.set_loss(LOSS)
-else:           #reliable links
-    ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring)
+    print(f"Running simulation {t}")
 
-for i in range (N_SIM):
-    ring.env.process(ring.start_election())
-    ring.env.run()
-    env_ring = simpy.Environment()
-    ring.clean(env_ring)
+    errors = []
 
-# ------------ BULLY ALGORITHM SIMULATION -----------
-stats_bully = SimStats(INITIATORS, DELAY, N_NODES, "Bully")
-stats_bully.set_loss(LOSS)
-stats_bully.set_id(len(sim_manager.stats))
-sim_manager.insert_stat(stats_bully)
-env_bully = simpy.Environment()
-bully = BullySimulation(env_bully, N_NODES, DELAY, DELAY_Q, stats_bully)
+    for i in range(500):
+        bully_stats = SimStats(INITIATORS, DELAY, N_NODES, "Bully", timeout=t)
 
-for i in range (N_SIM):
-    if UNRELIABLE:
-        bully.env.process(bully.start_election(INITIATORS, loss_rate=LOSS, debug_mode=DEBUG))
-    else:
-        bully.env.process(bully.start_election(INITIATORS, debug_mode=DEBUG))
-    bully.env.run()
-    env_bully = simpy.Environment()
-    bully.env = env_bully
+        bully_env = simpy.Environment()
+        bully_sim = BullySimulation(bully_env, N_NODES, DELAY, t, bully_stats)
+
+        for j in range(1000):
+            bully_sim.env.process(bully_sim.start_election(INITIATORS))
+            bully_sim.env.run()
+            bully_env = simpy.Environment()
+            bully_sim.env = bully_env
+
+        bully_stats.wrg_sim()
+        errors.append(bully_stats.wrong_stat)
+
+    print(f"End sim {t}")
+    mean_err = sum(errors) / len(errors)
+    return t, mean_err  
+
+def bully_timeout_analysis_parallel():
+    timeouts = np.round(np.arange(0.8, 1.0, 0.01), 2).tolist()
+    timeouts.append(0.99)
+    timeouts.sort()
+
+    with Pool(processes=cpu_count()) as p:
+        results = p.map(run_single_timeout, timeouts)
+
+    res_wrg = dict(results)
+    res_wrg = dict(sorted(res_wrg.items()))
+
+    plt.figure()
+    plt.title("Bully Wrong Simulations Analysis")
+    plt.plot(res_wrg.keys(), res_wrg.values())
+    plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter())
+    plt.xlabel("Quantile")
+    plt.ylabel("Percentage of Wrong Simulations")
+    plt.show()
+
+if __name__ == "__main__":
+    bully_timeout_analysis_parallel()
+

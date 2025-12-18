@@ -1,17 +1,18 @@
 import simpy
+import matplotlib.pyplot as plt
+import numpy as np
 
 from election.ring import RingSimulation
 from election.bully import BullySimulation
 from statistic.statistics import SimStats, StatsManager
-import matplotlib.pyplot as plt
 
 # ------------------- SETTINGS ---------------------
 N_NODES = 5
 DELAY = 110         # mean of exponential distribution for delays 
 INITIATORS = 1
-N_SIM = 10000
-LOSS = 0.1
-UNRELIABLE = True
+N_SIM = 100000
+LOSS = 0.2
+UNRELIABLE = False
 DELAY_Q_R = 0.99       # quantile of exponential distribution for timeouts 
 DELAY_Q = 0.8
 
@@ -44,7 +45,8 @@ stats_ring.compute_var_msg()
 stats_ring.compute_ci_msg()
 
 # ANALYZE TURNAROUND TIME
-# stats_ring.plot_runtimes_hist(200)          # plot histogram of simulations    
+# stats_ring.plot_ring_distribution(200)
+stats_ring.plot_runtimes_hist(200)          # plot histogram of simulations    
 # stats_ring.plot_runtimes_box_plot()         # plot box plot of simulation
 # stats_ring.plot_delays_hist_single(0)
 # stats_ring.plot_msg_vs_rtt(0,200)
@@ -72,6 +74,7 @@ for i in range (N_SIM):
     env_bully = simpy.Environment()
     bully.env = env_bully
 
+stats_bully.wrg_sim()
 stats_bully.remove_outliers()
 stats_bully.compute_mean_rtt()
 stats_bully.compute_var_rtt()
@@ -90,11 +93,11 @@ print(stats_bully)
 
 # ------------ BULLY VS RING -----------
 
-sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
+# sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
 
-# ------------ MULTIFACTORS ANALYSIS -------------
+# ------------ FACTORS ANALYSIS -------------
 
-# This method plots different simulations results for different factors
+# This function plots different simulations results for different factors
 #   params:
 #       tot_sims - number of simulations to perform
 #       n_init - list containing the number of initiators for each simulation
@@ -155,17 +158,28 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
 
     sim_manager.cmp_runtimes(ids, 200, sim_name)            # plot simulations results
 
+# possible titles to obtain a right plot
+#   - "Initiators" -> if the number of initiators changes
+#   - "Number of Nodes" -> if the number of nodes changes
+#   - "Delays Mean" -> if the delay mean changes
+#   - "Packet Loss Rate" -> if the packet loss changes
 tot_sims = 3
 sim_title = "Initiators"
-n_init = [1, 3, 4]#*tot_sims
-n_n = [5]*tot_sims
+n_init = [1,3,4]
+n_n = [8]*tot_sims
 n_delays = [DELAY]*tot_sims
 n_loss = [0.2]*tot_sims
 
-factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
+# factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=False, unreliable=True)
 
-# -------------- NUMBER OF NODES ANALYSIS ----------------
+# ------------ NUMBER OF NODES ANALYSIS -------------
 
+# this function plots the number of messages and the turnaround time at the 
+# variation of the number of nodes
+#   params:
+#       max_n_nodes - maximum number of nodes 
+#       bully - if true, simulations refer to the Bully, Ring otherwise
+#       unreliable - if true, simulations under unreliable links
 def n_nodes_sim(max_n_nodes, bully = True, unreliable = False):
     ids = []            # ids of each pack of simulations in the sim_manager
 
@@ -220,7 +234,39 @@ def n_nodes_sim(max_n_nodes, bully = True, unreliable = False):
         stats.compute_ci_msg()
 
     sim_manager.n_nodes_cmp(ids)
+
 # n_nodes_sim(8, bully=False, unreliable=True)
 
+def bully_timeout_analysis():
+
+    timeouts = np.round(np.arange(0.8, 1.0, 0.01), 2).tolist()
+    timeouts.append(0.99)
+    timeouts.sort()
+
+    ids = []
+
+    for t in timeouts:
+     
+        bully_stats = SimStats(INITIATORS, DELAY, N_NODES, "Bully", timeout=t)
+        bully_stats.set_id(len(sim_manager.stats))
+        sim_manager.insert_stat(bully_stats)
+        ids.append(bully_stats.id)
+        bully_env = simpy.Environment()
+        
+        bully_sim = BullySimulation(bully_env, N_NODES, DELAY, t, bully_stats)
+
+        for i in range (10000):
+            bully_sim.env.process(bully_sim.start_election(INITIATORS))
+            bully_sim.env.run()
+            bully_env = simpy.Environment()
+            bully_sim.env = bully_env
+
+        bully_stats.wrg_sim()
+        bully_stats.compute_mean_rtt()
+    
+    sim_manager.quantile_bully_cmp(ids)
+
+# bully_timeout_analysis()
+        
 # ------------ SHOW PLOTS ----------------
 plt.show()

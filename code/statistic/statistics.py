@@ -5,6 +5,7 @@ import numpy as np
 import scipy.stats as st
 from collections import Counter
 
+
 # this class represents the statistics for multiple simulations of an election
 # algorithm with the same factors
 #
@@ -28,7 +29,7 @@ from collections import Counter
 #       err_msg - err of the number of messages
 #       self.wrong_sims - list of runtimes of wrong simulations (only for reliable bully)
 class SimStats:
-    def __init__(self, initiators, delay, n_nodes, name, unreliable = False, timeout=-1, loss_rate=-1):
+    def __init__(self, initiators, delay, n_nodes, name, unreliable = False, timeout=0.0, loss_rate=0.0):
         self.initiators = initiators
         self.delay = delay
         self.n_nodes = n_nodes
@@ -52,6 +53,7 @@ class SimStats:
 
         # for bully simulation in the reliable case: identify which simulations are "wrong"
         self.wrong_sims = []
+        self.wrong_stat = 0.0
 
     def __str__(self):
         main_info = (
@@ -65,10 +67,13 @@ class SimStats:
         )
         
         if self.name == "Bully" and not self.unreliable:
-            wrong_stat = (len(self.wrong_sims) / len(self.runtimes)) * 100
-            main_info += f"- Wrong simulations: {wrong_stat:.4f} %"
+            main_info += f"- Wrong simulations: {self.wrong_stat:.4f} %"
 
         return main_info
+    
+    # method to return the list of runtimes
+    def get_runtimes(self):
+        return self.runtimes
 
     # method to set the id to the simulation (it will be the index of the stats 
     # list of class StatsManager
@@ -120,10 +125,6 @@ class SimStats:
     def add_wrong_sim(self):
         self.wrong_sims.append(len(self.runtimes))
 
-    # method to return the list of runtimes
-    def get_runtimes(self):
-        return self.runtimes
-
     # method to check the rate of wrong simulations of the reliable bully
     def check_wrong_sim(self, whis = 1.5):
         # follows boxplot where outliers are outside the "whiskers"
@@ -139,6 +140,9 @@ class SimStats:
         
         print ( (wrong_outlier/len(self.wrong_sims))*100, " of wrong simulations are also outliers")
         
+    def wrg_sim(self):
+        if self.name == "Bully" and not self.unreliable:
+            self.wrong_stat = (len(self.wrong_sims) / len(self.runtimes)) * 100
 
     # computes mean of runtimes
     def compute_mean_rtt(self):
@@ -202,7 +206,7 @@ class SimStats:
         plt.title(title)
         plt.hist(self.runtimes, bins=bins)
         plt.xlim()
-        plt.xlabel("runtime in ms")
+        plt.xlabel("Turnaround Time [ms]")
         plt.ylabel("#sim")
         plt.axvline(x = self.mean_rtt, color = 'red', label = 'Mean')
         plt.legend()
@@ -219,7 +223,7 @@ class SimStats:
         plt.plot(x,y, color="red")
 
         plt.xlim()
-        plt.xlabel("Runtime in ms")
+        plt.xlabel("Turnaround Time [ms]")
         plt.ylabel("Density")
         plt.legend()
 
@@ -228,7 +232,7 @@ class SimStats:
         plt.figure()
         plt.boxplot(self.runtimes, tick_labels=[self.name])
         plt.title(self.name+" - Box Plot")
-        plt.ylabel("Turnaround Time")
+        plt.ylabel("Turnaround Time [ms]")
 
     # method to plot the histogram of the delays for a given simulation
     #   params:
@@ -348,7 +352,8 @@ class StatsManager:
     #       name - title of the simulation comparison
     def cmp_runtimes(self, ids, bins, name):
 
-        title = "Simulations Comparison - "+name
+        reliable = "Unreliable" if self.stats[ids[0]].unreliable else "Reliable"
+        title = reliable + " " +self.stats[ids[0]].name+ " Analysis - "+name
         fig, axs = plt.subplots(len(ids), sharex = True)
         fig.suptitle(title)
         
@@ -359,13 +364,13 @@ class StatsManager:
             sub_label=""
             match name:
                 case "Initiators": 
-                    sub_label= f"{sim.name} with #initiators={sim.initiators}"
+                    sub_label= f"#initiators={sim.initiators}"
                 case "Number of Nodes":
-                    sub_label=f"{sim.name} with #nodes={sim.n_nodes}"
+                    sub_label=f"#nodes={sim.n_nodes}"
                 case "Delays Mean":
-                    sub_label=f"{sim.name} with delay mean={sim.delay}"
+                    sub_label=f"delay mean={sim.delay}"
                 case "Packet Loss Rate":
-                    sub_label=f"{sim.name} with loss rate={sim.loss_rate}"
+                    sub_label=f"loss rate={sim.loss_rate}"
                 case _:
                     sub_label=f"{sim.name}"
 
@@ -375,7 +380,7 @@ class StatsManager:
 
     def n_nodes_cmp(self, ids):
 
-        res_rtt = {}
+        res_rtt = {}   
         res_msg = {}
 
         for id in ids:
@@ -400,11 +405,16 @@ class StatsManager:
         axs[1].set_xlabel("#msg")
         axs[1].set_ylabel("#nodes")
 
+    def quantile_bully_cmp(self, ids):
+        res_rtt = {}   
 
-    
-    # method to remove all the outliers from each simulation
-    def remove_all_outliers(self):
-        for i in range(len(self.stats)):
-            self.stats[i].remove_outliers()
+        for id in ids:
+            sim = self.stats[id]
+            res_rtt[sim.timeout] = sim.mean_rtt
 
-       
+        res_rtt = dict(sorted(res_rtt.items()))
+        plt.figure()
+        plt.title("Bully Wrong Simulations Analysis")
+        plt.plot(res_rtt.keys(), res_rtt.values())
+        plt.xlabel("Quantile")
+        plt.ylabel("Turnaround Time [ms]")
