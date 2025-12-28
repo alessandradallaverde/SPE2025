@@ -107,10 +107,10 @@ class BullyNode(Node):
                 print(f"Time {self.env.now:.2f}: Node {self.id} sends {type} to node {dest_id}")
 
             # is packet lost?
+            # increase message counter
+            msg_delay = delay(self.delay_mean)
+            self.sim_stats.add_msg(self.sim_id, msg_delay)
             if random.uniform(0, 1) > self.loss_rate:
-                # increase message counter
-                msg_delay = delay(self.delay_mean)
-                self.sim_stats.add_msg(self.sim_id, msg_delay)
                 yield self.env.timeout(msg_delay)
                 # send the message
                 yield self.peers[dest_id].queue.put(election_msg)
