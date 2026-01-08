@@ -30,11 +30,9 @@ sim_manager = StatsManager()
 #       loss - loss rate
 #       delay_q - quantile of exponential distribution for unreliable timeouts
 def set_stats(initiators, delay, n_nodes, name, unreliable = False, loss = 0.0, delay_q = 0.0):
-    stats = SimStats(initiators, delay, n_nodes, name)
+    stats = SimStats(initiators, delay, n_nodes, name, unreliable, delay_q, loss)
     stats.set_id(len(sim_manager.stats))
-    sim_manager.insert_stat(stats) 
-    stats.set_loss(loss)
-    stats.set_timeout(delay_q)
+    sim_manager.insert_stat(stats)
 
     return stats
 
@@ -201,9 +199,10 @@ bully.env.run()
 # UNRELIABLE LINKS
 print("-------------BULLY UNRELIABLE LINKS-------------\n")
 print("------------------------------------------------\n\n")
+print(LOSS, DELAY_Q)
 stats_bully = set_stats(INITIATORS, DELAY, N_NODES, "Bully", True, LOSS, DELAY_Q)
 print("Starting bully with unreliable links execution...\n")
-bully_sim(stats_bully, N_NODES, DELAY, INITIATORS, N_SIM, False, LOSS, DELAY_Q, DELAY_Q_R)
+bully_sim(stats_bully, N_NODES, DELAY, INITIATORS, N_SIM, True, LOSS, DELAY_Q, DELAY_Q_R)
 print("Simulation completed!\n\n")
 
 stats_bully.plot_runtimes_hist(200)         # plot histogram of turnaround times   
