@@ -18,7 +18,7 @@ class Node:
         self.elected = -1
         self.delay_mean = delay_mean
 
-    # method to se the peers
+    # method to set the peers
     #   params:
     #       peers - node peers
     def obtain_peers(self, peers):

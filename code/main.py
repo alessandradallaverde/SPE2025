@@ -106,7 +106,8 @@ print("--------SINGLE RUN RING UNRELIABLE LINKS--------\n")
 
 stats_ring = set_stats(INITIATORS, DELAY, N_NODES, "Ring", True, LOSS, DELAY_Q)
 env_ring = simpy.Environment()
-ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS, unreliable=True, debug_mode=True)          
+ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS,
+                       unreliable=True, timeout=DELAY_Q, loss=LOSS, debug_mode=True)          
 env_ring.process(ring.start_election())         # starts Ring procedure
 env_ring.run()       
 print("\nRing election algorithm terminated")

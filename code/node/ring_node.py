@@ -71,7 +71,7 @@ class RingNode(Node):
                 break
             else:           # don't stop, restart cycle for resending the message
                 if self.debug_mode:
-                    print(f"Time {(self.env.now-delay):.2f}: Node {self.id} didn't received ACK from {next}, resend message")
+                    print(f"Time {(self.env.now-delay):.2f}: Node {self.id} didn't received ACK_{msg.type} from {next}, resend message")
 
     # this method is used to send an ack
     #   params:

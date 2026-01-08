@@ -60,4 +60,3 @@ def bully_timeout_analysis_parallel():
 
 if __name__ == "__main__":
     bully_timeout_analysis_parallel()
-

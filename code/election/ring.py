@@ -24,6 +24,11 @@ class RingSimulation(Simulation):
     def __init__(self, env, n_nodes, delay_mean, sim_stats, n_initiators = 1, 
                 unreliable = False, loss=0.0, timeout=0.0, debug_mode=False, rng=None):
         super().__init__(env, n_nodes, delay_mean)
+
+        if n_initiators > n_nodes - 1:
+            print("\031[1;94m------------------------------------------------\n")
+            print("OPERATION REJECTED: number of initiators greater than non-coordinator nodes!\033[0m\n")
+            return
         self.sim_stats = sim_stats
         self.n_initiators = n_initiators
         self.unreliable = unreliable
