@@ -3,12 +3,9 @@ from numpy import random
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as st
-from collections import Counter
-
 
 # this class represents the statistics for multiple simulations of an election
 # algorithm with the same factors
-#
 #   attributes:
 #       initiators - number of initiators
 #       delay - delay (exponential mean) chosen for the simulation
@@ -19,6 +16,8 @@ from collections import Counter
 #       loss_rate - prob. that a message isn't received under unreliable links condition
 #       runtimes - list containing runtime/turnaround time for each simulation
 #       msg_counter - list of the number of messages
+#       delays_hist - contains histogram information about the delays for each execution 
+#       delays - support array that contains the delays for the current execution
 #       id - id of the simulation
 #       current_sim - number of the algorithm execution
 #       mean_rtt - mean of the runtimes
@@ -27,7 +26,8 @@ from collections import Counter
 #       var_msg - var of the number of messages
 #       err_rtt - err of the runtimes
 #       err_msg - err of the number of messages
-#       self.wrong_sims - list of runtimes of wrong simulations (only for reliable bully)
+#       wrong_sims - list of runtimes of wrong simulations (only for reliable bully)
+#       wrong_stat - percentage of wrong simulations (only for reliable bully)
 class SimStats:
     def __init__(self, initiators, delay, n_nodes, name, unreliable = False, timeout=0.0, loss_rate=0.0):
         self.initiators = initiators
@@ -40,8 +40,8 @@ class SimStats:
         
         self.runtimes = []
         self.msg_counter = []
-        self.delays_hist = []
-        self.delays = []
+        self.delays_hist = []           # debug
+        self.delays = []            # debug
         self.id = -1
 
         self.mean_rtt = 0
@@ -77,6 +77,8 @@ class SimStats:
 
     # method to set the id to the simulation (it will be the index of the stats 
     # list of class StatsManager
+    #   params: 
+    #       id - id of the simulation in the StatsManager
     def set_id(self, id):
         self.id = id
 
@@ -99,9 +101,10 @@ class SimStats:
     def add_runtime(self, t_time):
         self.runtimes.append(t_time)
 
-    # increase counter message
+    # increase counter message and store delay message
     #   params:
     #       id - simulation index
+    #       delay - delay of the message
     def add_msg(self, id, delay):
         if id == len(self.msg_counter):
             self.msg_counter.insert(id, 0)
@@ -109,11 +112,11 @@ class SimStats:
         self.delays.append(delay)
 
     # method to clear delays list and save histogram information
+    #   params:
+    #       sim_id - id of the specific execution
     def clear_delays(self, sim_id=-1):
         if sim_id < len(self.msg_counter) and sim_id >= 0:
-            # TODO: decide how to set the bins
             bins_msg = round(self.msg_counter[sim_id]/2)        
-
             counts, bins = np.histogram(self.delays, bins=bins_msg)
             counts_d, bins_d = np.histogram(self.delays, bins=bins_msg, density=True)
             self.delays_hist.append((counts, bins, counts_d, bins_d))         
@@ -191,8 +194,8 @@ class SimStats:
 
     # method to compute asymptotic CI 95% confidence
     #   params:
-    #       var       - variance of array to compute ci for
-    #       n         - length of array to compute ci for
+    #       var - variance of array to compute ci for
+    #       n  - length of array to compute ci for
     def compute_ci(self, var, n):
         return 1.96 * math.sqrt(var / n)
 
@@ -213,6 +216,8 @@ class SimStats:
 
     # method to plot the histogram of the simulation runtimes and the gamma 
     # distribution 
+    #   params:
+    #       bins - bins of the histogram
     def plot_ring_distribution(self, bins):
         plt.figure()
         plt.hist(self.runtimes, bins=bins, label = "Ring - Simulations with Reliable Links", density = True)
@@ -252,28 +257,11 @@ class SimStats:
             plt.ylabel("Density")
 
         plt.xlabel("Delay")
-
-    def plot_msg_vs_rtt(self, sim_index, bins):
-        title = self.name+" - Msg vs. Runtime"
-        fig, axs = plt.subplots(1,2)
-        fig.suptitle(title)
-        
-        axs[0].hist(self.runtimes, bins=bins)
-        rel = "Unreliable" if self.unreliable else "Reliable"
-        axs[0].set_title(self.name+" - "+rel+" Links")
-        axs[0].set_xlabel("Runtime [ms]")
-        axs[0].set_ylabel("#sim")
-
-        counts = Counter(self.msg_counter)
-        counts = dict(sorted(counts.items()))
-        axs[1].plot(counts.keys(), counts.values(), linestyle='dotted')
-        axs[1].set_title(self.name+" - Msg Histogram")
-        axs[1].set_xlabel("#msg")
-        axs[1].set_ylabel("Counts")
     
     # method to remove outliers data points from runtimes and msg 
+    #   params:
+    #       whis - factor to compute range of whiskers
     def remove_outliers(self, whis = 1.5):
-        # follows boxplot where outliers are outside the "whiskers"
 
         if len(self.runtimes) == 0:
             print("Warning: no runtimes available to remove outliers.")
@@ -296,44 +284,20 @@ class SimStats:
         bound_2 = q_3 + whis * (q_3 - q_1)
         self.msg_counter = list(filter(not_outlier, self.msg_counter))
 
-    '''
-    # method to compute bootstrap ci
-    # parameters:
-    # ci_level          ->  confidence level
-    # stat_function     ->  reference to the function that can compute the needed statistic (mean, variance, ect.)
-    # stats             ->  list of data
-    def bootstrap_stats(self, ci_level, stat_function, stats):
-        
-        r0 = math.floor(((1 - ci_level) * len(stats)) / 2)
-        R = math.ceil(2 * r0 / (1 - ci_level)) - 1
-        boot_stat = []
-        for i in range(R):
-            # draw n & compute stats
-            draw = []
-            for j in range(len(stats)):
-                index = random.randint(0, len(stats))
-                draw.append(stats[index])
-            
-            boot_stat.append(stat_function(draw))
-        # sort
-        boot_stat.sort()
-        return (boot_stat[r0], boot_stat[R + 1 -r0])
-    '''
-
 # this class represents the statistics result of different simulation with 
 # different factors, it is used to create plots/further analysis and to 
 # analyze factors
-#   
 #   attributes:
 #       stats: a list of SimStat objects
 class StatsManager:
     def __init__(self):
         self.stats = []
 
+    # method to insert a SimStats reference to the list
     def insert_stat(self, sim_stat):
         self.stats.append(sim_stat)
 
-    # method to analyze two different simulations' box plots
+    # method to analyze two different simulations box plots
     #   params:
     #       id1 - index of the first simulation in the stats list
     #       id2 - index of the second simulation in the stats list
@@ -378,6 +342,10 @@ class StatsManager:
             axs[i].legend(loc="best")
             axs[i].axvline(x=sim.mean_rtt)
 
+    # method to plot the change in the number of messages and in the turnaround time 
+    # based on the number of nodes
+    #   params:
+    #       ids - list of indexes of the simulation contained in the stats attribute 
     def n_nodes_cmp(self, ids):
 
         res_rtt = {}   
@@ -405,6 +373,10 @@ class StatsManager:
         axs[1].set_xlabel("#msg")
         axs[1].set_ylabel("#nodes")
 
+    # method to plot the change in the number of messages and in the turnaround time 
+    # based on chosen quantile of timeouts for the reliable bully
+    #   params:
+    #       ids - list of indexes of the simulation contained in the stats attribute 
     def quantile_bully_cmp(self, ids):
         res_rtt = {}   
 

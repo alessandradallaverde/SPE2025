@@ -1,9 +1,8 @@
 # this class represents a simulation of an election
-#
-# attributes
-#   - env -> simpy environment
-#   - nodes -> network nodes
-#   - finish_event -> simpy event triggered when a coordinator is elected
+#   attributes:
+#       env - simpy environment
+#       n_nodes - network nodes
+#       delay_mean - exponential mean for delays
 class Simulation:
 
     def __init__(self, env, n_nodes, delay_mean):
@@ -13,7 +12,7 @@ class Simulation:
         self.n_nodes = n_nodes
         self.delay_mean = delay_mean
 
-    # method to add triggers to the nodes
+    # method to add event trigger to the nodes
     def add_triggers(self):
         for i in range(len(self.nodes)):
             # add reference to 'finish_event' so that nodes can trigger it
@@ -21,6 +20,8 @@ class Simulation:
 
     # method to clean the class and to set a new environment with a specified 
     # number of nodes
+    #    params:
+    #        env - simpy environment
     def clean(self, env):
         self.env = env
         self.nodes.clear()
