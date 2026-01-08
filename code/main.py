@@ -32,10 +32,9 @@ sim_manager = StatsManager()
 def set_stats(initiators, delay, n_nodes, name, unreliable = False, loss = 0.0, delay_q = 0.0):
     stats = SimStats(initiators, delay, n_nodes, name)
     stats.set_id(len(sim_manager.stats))
-    sim_manager.insert_stat(stats)
-    if unreliable:          
-        stats.set_loss(loss)
-        stats.set_timeout(delay_q)
+    sim_manager.insert_stat(stats) 
+    stats.set_loss(loss)
+    stats.set_timeout(delay_q)
 
     return stats
 
@@ -214,6 +213,7 @@ plt.show()
 # ------------ BULLY VS RING -----------
 
 sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)        # plot Ring and Bully of turnaround times box plot
+plt.show()
 
 # ------------ FACTORS ANALYSIS -------------
 
@@ -315,16 +315,16 @@ print("-------------NUMBER OF NODES ANALYSIS-----------\n")
 print("------------------------------------------------\n\n")
 
 print("Starting number of nodes analysis of the bully reliable links...\n")
-n_nodes_sim(25, bully=True, unreliable=False)
+# n_nodes_sim(25, bully=True, unreliable=False)
 plt.show()
 print("Starting number of nodes analysis of the ring reliable links...\n")
-n_nodes_sim(25, bully=False, unreliable=False)
+# n_nodes_sim(25, bully=False, unreliable=False)
 plt.show()
 print("Starting number of nodes analysis of the bully unreliable links...\n")
-n_nodes_sim(25, bully=True, unreliable=True)
+# n_nodes_sim(25, bully=True, unreliable=True)
 plt.show()
 print("Starting number of nodes analysis of the ring unreliable links...\n")
-n_nodes_sim(25, bully=False, unreliable=True)
+# n_nodes_sim(25, bully=False, unreliable=True)
 plt.show()
 print("Analysis completed!\n\n")
 
@@ -335,7 +335,6 @@ print("Analysis completed!\n\n")
 def bully_timeout_analysis():
 
     timeouts = np.round(np.arange(0.8, 1.0, 0.01), 2).tolist()      # generate timeouts quantiles from 0.8 to 0.98  
-    timeouts.append(0.99)
     timeouts.sort()
 
     ids = []            # ids of each pack of simulations in the sim_manager
