@@ -305,7 +305,8 @@ class StatsManager:
         plt.figure()
         labels=[self.stats[id1].name, self.stats[id2].name]
         plt.boxplot([self.stats[id1].runtimes, self.stats[id2].runtimes], labels=labels)
-        plt.title("Box Plots")
+        reliable = f"Unreliable Links with Loss Rate = {self.stats[id1].loss_rate}" if self.stats[id1].unreliable else "Reliable Links"
+        plt.title("Box Plots - "+ reliable)
         plt.ylabel("Turnaround Time")
     
     # method to show different simulations runtimes based on the factor that 
