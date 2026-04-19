@@ -13,11 +13,14 @@ import scipy.stats as st
 #       name - name of the simulation
 #       unreliable - if true, the simulation assumes unreliable links
 #       timeout - quantile of exponential distribution to set the timeout
-#       loss_rate - prob. that a message isn't received under unreliable links condition
+#       loss_rate - prob. that a message isn't received under unreliable links
+#       condition
 #       runtimes - list containing runtime/turnaround time for each simulation
 #       msg_counter - list of the number of messages
-#       delays_hist - contains histogram information about the delays for each execution 
-#       delays - support array that contains the delays for the current execution
+#       delays_hist - contains histogram information about the delays for each
+#       execution 
+#       delays - support array that contains the delays for the current
+#       execution
 #       id - id of the simulation
 #       current_sim - number of the algorithm execution
 #       mean_rtt - mean of the runtimes
@@ -29,7 +32,16 @@ import scipy.stats as st
 #       wrong_sims - list of runtimes of wrong simulations (only for reliable bully)
 #       wrong_stat - percentage of wrong simulations (only for reliable bully)
 class SimStats:
-    def __init__(self, initiators, delay, n_nodes, name, unreliable = False, timeout=0.0, loss_rate=0.0):
+    def __init__(
+            self,
+            initiators,
+            delay,
+            n_nodes,
+            name,
+            unreliable = False,
+            timeout=0.0,
+            loss_rate=0.0
+        ):
         self.initiators = initiators
         self.delay = delay
         self.n_nodes = n_nodes
@@ -40,8 +52,8 @@ class SimStats:
         
         self.runtimes = []
         self.msg_counter = []
-        self.delays_hist = []           # debug
-        self.delays = []            # debug
+        self.delays_hist = []   # debug
+        self.delays = []    # debug
         self.id = -1
 
         self.mean_rtt = 0
@@ -51,7 +63,8 @@ class SimStats:
         self.err_rtt = 0
         self.err_msg = 0
 
-        # for bully simulation in the reliable case: identify which simulations are "wrong"
+        # for bully simulation in the reliable case: identify which simulations
+        # are "wrong"
         self.wrong_sims = []
         self.wrong_stat = 0.0
 
@@ -59,10 +72,13 @@ class SimStats:
         main_info = (
             f"{self.name} Algorithm:\n"
             f"- Simulations: {len(self.runtimes)}\n"
-            f"- Parameters: N = {self.n_nodes}, init = {self.initiators}, mean delay = {self.delay:.2f}\n"
-            f"- Turnaround time mean: {self.mean_rtt:.2f} \u00B1 {self.err_rtt:.2f} ms\n"
+            f"- Parameters: N = {self.n_nodes}, init = {self.initiators}, " +
+            "mean delay = {self.delay:.2f}\n"
+            f"- Turnaround time mean: {self.mean_rtt:.2f} \u00B1 " +
+            "{self.err_rtt:.2f} ms\n"
             f"- Turnaround time var: {self.var_rtt:.2f}\n"
-            f"- Message number mean: {self.mean_msg:.2f} \u00B1 {self.err_msg:.2f}\n"
+            f"- Message number mean: {self.mean_msg:.2f} \u00B1 " +
+            "{self.err_msg:.2f}\n"
             f"- Message number var: {self.var_msg:.2f}\n"
         )
         
@@ -118,11 +134,13 @@ class SimStats:
         if sim_id < len(self.msg_counter) and sim_id >= 0:
             bins_msg = round(self.msg_counter[sim_id]/2)        
             counts, bins = np.histogram(self.delays, bins=bins_msg)
-            counts_d, bins_d = np.histogram(self.delays, bins=bins_msg, density=True)
+            counts_d, bins_d = np.histogram(
+                self.delays, bins=bins_msg, density=True
+            )
             self.delays_hist.append((counts, bins, counts_d, bins_d))         
 
-            self.delays.clear()     # clear the delays list for the next simulation
-
+            # clear the delays list for the next simulation
+            self.delays.clear()     
 
     # add index of simulation to the wrong simulations counter
     def add_wrong_sim(self):
@@ -141,7 +159,10 @@ class SimStats:
             if self.runtimes[w_s] < bound_1 or self.runtimes[w_s] > bound_2:
                 wrong_outlier += 1
         
-        print ( (wrong_outlier/len(self.wrong_sims))*100, " of wrong simulations are also outliers")
+        print(
+            (wrong_outlier/len(self.wrong_sims))*100,
+            " of wrong simulations are also outliers"
+        )
         
     def wrg_sim(self):
         if self.name == "Bully" and not self.unreliable:
@@ -220,7 +241,12 @@ class SimStats:
     #       bins - bins of the histogram
     def plot_ring_distribution(self, bins):
         plt.figure()
-        plt.hist(self.runtimes, bins=bins, label = "Ring - Simulations with Reliable Links", density = True)
+        plt.hist(
+            self.runtimes,
+            bins=bins,
+            label = "Ring - Simulations with Reliable Links",
+            density = True
+        )
 
         a, loc, scale = st.gamma.fit(self.runtimes, floc=0)
         x = np.linspace(min(self.runtimes), max(self.runtimes), bins)
@@ -248,11 +274,15 @@ class SimStats:
 
         plt.figure()
         if density:
-            plt.stairs(self.delays_hist[sim_index][2], self.delays_hist[sim_index][3])
+            plt.stairs(
+                self.delays_hist[sim_index][2], self.delays_hist[sim_index][3]
+            )
             plt.title(self.name+" - Delays Histogram")
             plt.ylabel("Count")
         else:
-            plt.stairs(self.delays_hist[sim_index][0], self.delays_hist[sim_index][1])
+            plt.stairs(
+                self.delays_hist[sim_index][0], self.delays_hist[sim_index][1]
+            )
             plt.title(self.name+" - Delays Density")
             plt.ylabel("Density")
 
@@ -304,8 +334,14 @@ class StatsManager:
     def cmp_runtimes_box_plot(self, id1, id2):
         plt.figure()
         labels=[self.stats[id1].name, self.stats[id2].name]
-        plt.boxplot([self.stats[id1].runtimes, self.stats[id2].runtimes], labels=labels)
-        reliable = f"Unreliable Links with Loss Rate = {self.stats[id1].loss_rate}" if self.stats[id1].unreliable else "Reliable Links"
+        plt.boxplot(
+            [self.stats[id1].runtimes, self.stats[id2].runtimes], labels=labels
+        )
+        if self.stats[id1].unreliable:
+            reliable = f"Unreliable Links with Loss Rate = "
+            f"{self.stats[id1].loss_rate}"
+        else:
+            reliable = "Reliable Links"
         plt.title("Box Plots - "+ reliable)
         plt.ylabel("Turnaround Time")
     
@@ -343,10 +379,11 @@ class StatsManager:
             axs[i].legend(loc="best")
             axs[i].axvline(x=sim.mean_rtt)
 
-    # method to plot the change in the number of messages and in the turnaround time 
-    # based on the number of nodes
+    # method to plot the change in the number of messages and in the turnaround 
+    # time based on the number of nodes
     #   params:
-    #       ids - list of indexes of the simulation contained in the stats attribute 
+    #       ids - list of indexes of the simulation contained in the stats
+    #       attribute 
     def n_nodes_cmp(self, ids):
 
         res_rtt = {}   
@@ -358,7 +395,8 @@ class StatsManager:
             res_msg[sim.n_nodes] = sim.mean_msg
 
         rel = "Unreliable" if self.stats[ids[0]].unreliable else "Reliable"
-        title = "Number of Nodes Analysis - " + self.stats[ids[0]].name + " with " + rel + " Links"
+        title = f"Number of Nodes Analysis - {self.stats[ids[0]].name} "
+        "with {rel} Links"
         fig, axs = plt.subplots(1,2)
         fig.suptitle(title)
         
@@ -374,10 +412,11 @@ class StatsManager:
         axs[1].set_xlabel("#msg")
         axs[1].set_ylabel("#nodes")
 
-    # method to plot the change in the number of messages and in the turnaround time 
-    # based on chosen quantile of timeouts for the reliable bully
+    # method to plot the change in the number of messages and in the turnaround
+    # time based on chosen quantile of timeouts for the reliable bully
     #   params:
-    #       ids - list of indexes of the simulation contained in the stats attribute 
+    #       ids - list of indexes of the simulation contained in the stats
+    #       attribute 
     def quantile_bully_cmp(self, ids):
         res_rtt = {}   
 

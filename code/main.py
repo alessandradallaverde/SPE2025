@@ -10,12 +10,12 @@ from statistic.statistics import SimStats, StatsManager
 # ------------------- SETTINGS ---------------------
 # DEFAULT SCENARIO
 N_NODES = 5
-DELAY = 110         # mean of exponential distribution for delays 
+DELAY = 110 # mean of exponential distribution for delays 
 INITIATORS = 1
 N_SIM = 10000
 LOSS = 0.2      
-DELAY_Q_R = 0.99       # quantile of exponential distribution for reliable Bully timeouts  
-DELAY_Q = 0.8           # quantile of exponential distribution for unreliable timeouts
+DELAY_Q_R = 0.99    # quantile of exponential distribution for reliable Bully 
+DELAY_Q = 0.8   # quantile of exponential distribution for unreliable timeouts
 
 sim_manager = StatsManager()
 ids_boxplot = []
@@ -27,11 +27,27 @@ ids_boxplot = []
 #       initiators - number of initiators
 #       delay - exponential mean for delays
 #       n_nodes - number of nodes
-#       unreliable - boolean value, if true the simulations are under unreliable links
+#       unreliable - boolean value, simulations with unreliable links
 #       loss - loss rate
 #       delay_q - quantile of exponential distribution for unreliable timeouts
-def set_stats(initiators, delay, n_nodes, name, unreliable = False, loss = 0.0, delay_q = 0.0):
-    stats = SimStats(initiators, delay, n_nodes, name, unreliable, delay_q, loss)
+def set_stats(
+    initiators,
+    delay,
+    n_nodes,
+    name,
+    unreliable = False,
+    loss = 0.0,
+    delay_q = 0.0
+):
+    stats = SimStats(
+        initiators,
+        delay,
+        n_nodes,
+        name,
+        unreliable,
+        delay_q,
+        loss
+    )
     stats.set_id(len(sim_manager.stats))
     sim_manager.insert_stat(stats)
 
@@ -44,21 +60,43 @@ def set_stats(initiators, delay, n_nodes, name, unreliable = False, loss = 0.0, 
 #       delay - exponential mean for delays
 #       initiators - number of initiators
 #       n_sim - number of repetitions of the Ring procedure
-#       unreliable - boolean value, if true the simulations are under unreliable links
+#       unreliable - boolean value, simulations with links
 #       loss - loss rate
 #       timeout - quantile of exponential distribution for unreliable timeouts
-def ring_sim(stats_ring, n_nodes, delay, initiators, n_sim, unreliable = False,
-               loss = 0.0, timeout = 0.0, debug_mode=False):
-
+def ring_sim(
+    stats_ring,
+    n_nodes,
+    delay,
+    initiators,
+    n_sim,
+    unreliable = False,
+    loss = 0.0,
+    timeout = 0.0,
+    debug_mode=False
+):
     env_ring = simpy.Environment()
     if unreliable:          
-        ring = RingSimulation(env_ring, n_nodes, delay, stats_ring, n_initiators=initiators,
-                                unreliable=True, loss=loss, timeout=timeout, debug_mode=debug_mode)
+        ring = RingSimulation(
+            env_ring,
+            n_nodes,
+            delay,
+            stats_ring,
+            n_initiators=initiators,
+            unreliable=True,
+            loss=loss,
+            timeout=timeout,
+            debug_mode=debug_mode
+        )
     else:          
-        ring = RingSimulation(env_ring, n_nodes, delay, stats_ring, n_initiators=initiators)          
+        ring = RingSimulation(
+            env_ring,
+            n_nodes,
+            delay,
+            stats_ring,
+            n_initiators=initiators)          
 
     for i in range(n_sim):
-        env_ring.process(ring.start_election())         # starts Ring procedure
+        env_ring.process(ring.start_election()) # starts Ring procedure
         env_ring.run()
         env_ring = simpy.Environment()
         ring.clean(env_ring)            
@@ -78,7 +116,14 @@ print("---------SINGLE RUN RING RELIABLE LINKS---------\n")
 
 stats_ring = set_stats(INITIATORS, DELAY, N_NODES, "Ring", False, LOSS, DELAY_Q)
 env_ring = simpy.Environment()
-ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS, debug_mode=True)          
+ring = RingSimulation(
+    env_ring,
+    N_NODES,
+    DELAY,
+    stats_ring,
+    n_initiators=INITIATORS,
+    debug_mode=True
+)          
 env_ring.process(ring.start_election())         # starts Ring procedure
 env_ring.run()  
 print("\nRing election algorithm terminated")
@@ -93,9 +138,8 @@ ids_boxplot.append(stats_ring.id)
 print("Starting ring with reliable links execution...\n")
 ring_sim(stats_ring, N_NODES, DELAY, INITIATORS, N_SIM, False, LOSS, DELAY_Q)
 
-# stats_ring.plot_ring_distribution(200)      # plot histogram of turnaround times (density)
-stats_ring.plot_runtimes_hist(200)          # plot histogram of turnaround times 
-print(stats_ring)           # print simulations results 
+stats_ring.plot_runtimes_hist(200)  # plot histogram of turnaround times 
+print(stats_ring)   # print simulations results 
 plt.show()
 print("Election completed!\n\n")
 
@@ -105,9 +149,18 @@ print("--------SINGLE RUN RING UNRELIABLE LINKS--------\n")
 
 stats_ring = set_stats(INITIATORS, DELAY, N_NODES, "Ring", True, LOSS, DELAY_Q)
 env_ring = simpy.Environment()
-ring = RingSimulation(env_ring, N_NODES, DELAY, stats_ring, n_initiators=INITIATORS,
-                       unreliable=True, timeout=DELAY_Q, loss=LOSS, debug_mode=True)          
-env_ring.process(ring.start_election())         # starts Ring procedure
+ring = RingSimulation(
+    env_ring,
+    N_NODES,
+    DELAY,
+    stats_ring,
+    n_initiators=INITIATORS,
+    unreliable=True,
+    timeout=DELAY_Q,
+    loss=LOSS,
+    debug_mode=True
+)          
+env_ring.process(ring.start_election()) # starts Ring procedure
 env_ring.run()       
 print("\nRing election algorithm terminated")
 print("\n------------------------------------------------\n")
@@ -121,8 +174,8 @@ ids_boxplot.append(stats_ring.id)
 print("Starting ring with unreliable links execution...\n")
 ring_sim(stats_ring, N_NODES, DELAY, INITIATORS, N_SIM, True, LOSS, DELAY_Q)
 
-stats_ring.plot_runtimes_hist(200)          # plot histogram of turnaround times 
-print(stats_ring)           # print simulations results 
+stats_ring.plot_runtimes_hist(200)  # plot histogram of turnaround times 
+print(stats_ring)   # print simulations results 
 plt.show()
 print("Simulation completed!\n\n")
 
@@ -134,24 +187,48 @@ print("Simulation completed!\n\n")
 #       delay - exponential mean for delays
 #       initiators - number of initiators
 #       n_sim - number of repetitions of the Ring procedure
-#       unreliable - boolean value, if true the simulations are under unreliable links
+#       unreliable - boolean value, if true simulations with unreliable links
 #       loss - loss rate
 #       delay_q - quantile of exponential distribution for unreliable timeouts
 #       delay_q_r - quantile of exponential distribution for reliable timeouts
-def bully_sim(stats_bully, n_nodes, delay, initiators, n_sim, unreliable = False, 
-               loss = 0.0, delay_q = 0.0, delay_q_r = 0.0, debug_mode = False):
-    
+def bully_sim(
+    stats_bully,
+    n_nodes,
+    delay,
+    initiators,
+    n_sim,
+    unreliable = False, 
+    loss = 0.0,
+    delay_q = 0.0,
+    delay_q_r = 0.0,
+    debug_mode = False
+):
     env_bully = simpy.Environment()
     if unreliable:
         bully = BullySimulation(env_bully, n_nodes, delay, delay_q, stats_bully)
     else:
-        bully = BullySimulation(env_bully, n_nodes, delay, delay_q_r, stats_bully)
+        bully = BullySimulation(
+            env_bully,
+            n_nodes,
+            delay,
+            delay_q_r, 
+            stats_bully
+        )
 
+    # Bully procedure
     for i in range (n_sim):
-        if unreliable:          # Bully procedure
-            bully.env.process(bully.start_election(initiators, loss_rate=loss, debug_mode=debug_mode))
+        if unreliable:          
+            bully.env.process(
+                bully.start_election(
+                    initiators,
+                    loss_rate=loss,
+                    debug_mode=debug_mode
+                )
+            )
         else:
-            bully.env.process(bully.start_election(initiators, debug_mode=debug_mode))
+            bully.env.process(
+                bully.start_election(initiators, debug_mode=debug_mode)
+            )
         bully.env.run()
         env_bully = simpy.Environment()
         bully.env = env_bully
@@ -170,7 +247,15 @@ def bully_sim(stats_bully, n_nodes, delay, initiators, n_sim, unreliable = False
 print("------------------------------------------------\n")
 print("---------SINGLE RUN BULLY RELIABLE LINKS--------\n")
 
-stats_bully = set_stats(INITIATORS, DELAY, N_NODES, "Bully", False, LOSS, DELAY_Q_R)
+stats_bully = set_stats(
+    INITIATORS,
+    DELAY,
+    N_NODES,
+    "Bully",
+    False,
+    LOSS,
+    DELAY_Q_R
+)
 env_bully = simpy.Environment()
 bully = BullySimulation(env_bully, N_NODES, DELAY, DELAY_Q_R, stats_bully)
 bully.env.process(bully.start_election(INITIATORS, debug_mode=True))
@@ -179,12 +264,30 @@ bully.env.run()
 # RELIABLE LINKS 
 print("--------------BULLY RELIABLE LINKS--------------\n")
 print("------------------------------------------------\n\n")
-stats_bully = set_stats(INITIATORS, DELAY, N_NODES, "Bully", False, LOSS, DELAY_Q_R)
+stats_bully = set_stats(
+    INITIATORS,
+    DELAY,
+    N_NODES,
+    "Bully",
+    False,
+    LOSS,
+    DELAY_Q_R
+)
 ids_boxplot.append(stats_bully.id)
 print("Starting bully with reliable links execution...\n")
-bully_sim(stats_bully, N_NODES, DELAY, INITIATORS, N_SIM, False, LOSS, DELAY_Q, DELAY_Q_R)
+bully_sim(
+    stats_bully,
+    N_NODES,
+    DELAY,
+    INITIATORS,
+    N_SIM,
+    False,
+    LOSS,
+    DELAY_Q,
+    DELAY_Q_R
+)
 
-stats_bully.plot_runtimes_hist(200)         # plot histogram of turnaround times   
+stats_bully.plot_runtimes_hist(200) # plot histogram of turnaround times   
 print(stats_bully)
 plt.show()
 print("Simulation completed!\n\n")
@@ -194,21 +297,49 @@ print("Simulation completed!\n\n")
 print("------------------------------------------------\n")
 print("--------SINGLE RUN BULLY UNRELIABLE LINKS-------\n")
 
-stats_bully = set_stats(INITIATORS, DELAY, N_NODES, "Bully", True, LOSS, DELAY_Q)
+stats_bully = set_stats(
+    INITIATORS,
+    DELAY,
+    N_NODES,
+    "Bully",
+    True,
+    LOSS,
+    DELAY_Q
+)
 env_bully = simpy.Environment()
 bully = BullySimulation(env_bully, N_NODES, DELAY, DELAY_Q, stats_bully)
-bully.env.process(bully.start_election(INITIATORS, loss_rate=LOSS, debug_mode=True))
+bully.env.process(
+    bully.start_election(INITIATORS, loss_rate=LOSS, debug_mode=True)
+)
 bully.env.run()
 
 # UNRELIABLE LINKS
 print("-------------BULLY UNRELIABLE LINKS-------------\n")
 print("------------------------------------------------\n\n")
-stats_bully = set_stats(INITIATORS, DELAY, N_NODES, "Bully", True, LOSS, DELAY_Q)
+stats_bully = set_stats(
+    INITIATORS,
+    DELAY,
+    N_NODES, 
+    "Bully",
+    True,
+    LOSS,
+    DELAY_Q
+)
 ids_boxplot.append(stats_bully.id)
 print("Starting bully with unreliable links execution...\n")
-bully_sim(stats_bully, N_NODES, DELAY, INITIATORS, N_SIM, True, LOSS, DELAY_Q, DELAY_Q_R)
+bully_sim(
+    stats_bully,
+    N_NODES,
+    DELAY,
+    INITIATORS,
+    N_SIM,
+    True,
+    LOSS,
+    DELAY_Q,
+    DELAY_Q_R
+)
 
-stats_bully.plot_runtimes_hist(200)         # plot histogram of turnaround times   
+stats_bully.plot_runtimes_hist(200) # plot histogram of turnaround times   
 print(stats_bully)
 print("Simulation completed!\n\n")
 plt.show()
@@ -238,8 +369,26 @@ print("Comparison with reliable links (loss rate = 0.75)...\n\n")
 stats_ring = set_stats(INITIATORS, DELAY, N_NODES, "Ring", True, 0.75, DELAY_Q)
 ring_sim(stats_ring, N_NODES, DELAY, INITIATORS, N_SIM, True, 0.75, DELAY_Q)
 print(stats_ring)
-stats_bully = set_stats(INITIATORS, DELAY, N_NODES, "Bully", True, 0.75, DELAY_Q)
-bully_sim(stats_bully, N_NODES, DELAY, INITIATORS, N_SIM, True, 0.75, DELAY_Q, DELAY_Q_R)
+stats_bully = set_stats(
+    INITIATORS,
+    DELAY,
+    N_NODES,
+    "Bully",
+    True,
+    0.75,
+    DELAY_Q
+)
+bully_sim(
+    stats_bully,
+    N_NODES,
+    DELAY,
+    INITIATORS,
+    N_SIM,
+    True,
+    0.75,
+    DELAY_Q,
+    DELAY_Q_R
+)
 print(stats_bully)
 sim_manager.cmp_runtimes_box_plot(stats_bully.id, stats_ring.id)
 plt.show()
@@ -256,25 +405,68 @@ print("Comparison completed!\n\n")
 #       n_n - list containing the number of nodes for each simulation
 #       n_delays - list containing the delays' mean for each simulation
 #       n_loss - list containing the loss rate for each simulation
-#       bully - boolean value, if true the simulations will be the one of the bully
-#       unreliable - boolean value, if true we are under the unreliable links assumption
-def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreliable):
-    ids = []            # ids of each pack of simulations in the sim_manager
+#       bully - boolean value, if true bully simulations
+#       unreliable - boolean value, if true, unreliable links assumption
+def factors_sim(
+    sim_name,
+    tot_sims,
+    n_init,
+    n_n,
+    n_delays,
+    n_loss,
+    bully,
+    unreliable
+):
+    ids = []    # ids of each pack of simulations in the sim_manager
 
     for i in range(tot_sims):
         # set SimStats
         name = f"Bully" if bully else f"Ring"
         if bully and not unreliable:
-            stats = set_stats(n_init[i], n_delays[i], n_n[i], name, unreliable, n_loss[i], DELAY_Q_R)
+            stats = set_stats(
+                n_init[i],
+                n_delays[i],
+                n_n[i],
+                name,
+                unreliable,
+                n_loss[i],
+                DELAY_Q_R
+            )
         else:
-            stats = set_stats(n_init[i], n_delays[i], n_n[i], name, unreliable, n_loss[i], DELAY_Q)
+            stats = set_stats(
+                n_init[i],
+                n_delays[i],
+                n_n[i], name,
+                unreliable,
+                n_loss[i],
+                DELAY_Q
+            )
         ids.append(stats.id)
 
         # perform simulations
         if bully:
-            bully_sim(stats, n_n[i], n_delays[i], n_init[i], N_SIM, unreliable, n_loss[i], DELAY_Q, DELAY_Q_R)
+            bully_sim(
+                stats,
+                n_n[i],
+                n_delays[i],
+                n_init[i],
+                N_SIM,
+                unreliable,
+                n_loss[i],
+                DELAY_Q,
+                DELAY_Q_R
+            )
         else:
-            ring_sim(stats, n_n[i], n_delays[i], n_init[i], N_SIM, unreliable, n_loss[i], DELAY_Q)
+            ring_sim(
+                stats,
+                n_n[i],
+                n_delays[i],
+                n_init[i],
+                N_SIM,
+                unreliable,
+                n_loss[i],
+                DELAY_Q
+            )
 
         match sim_name:
             case "Initiators": 
@@ -288,15 +480,15 @@ def factors_sim(sim_name, tot_sims, n_init, n_n, n_delays, n_loss, bully, unreli
             case _:
                 print(f"Completed simulation {i}")
 
-    sim_manager.cmp_runtimes(ids, 200, sim_name)            # plot simulations results
+    sim_manager.cmp_runtimes(ids, 200, sim_name)    # plot simulations results
 
 # possible titles to obtain a right plot
 #   - "Initiators" -> if the number of initiators changes
 #   - "Number of Nodes" -> if the number of nodes changes
 #   - "Delays Mean" -> if the delay mean changes
 #   - "Packet Loss Rate" -> if the packet loss changes
-tot_sims = 3
 sim_title = "Packet Loss Rate"
+tot_sims = 3
 n_init = [1]*tot_sims
 n_n = [5]*tot_sims
 n_delays = [DELAY]*tot_sims
@@ -307,7 +499,16 @@ print("-------------BULLY LOSS RATE ANALYSIS-----------\n")
 print("------------------------------------------------\n\n")
 
 print("Starting bully loss rate analysis...\n")
-factors_sim(sim_title, tot_sims, n_init, n_n, n_delays, n_loss=n_loss, bully=True, unreliable=True)
+factors_sim(
+    sim_title,
+    tot_sims,
+    n_init,
+    n_n,
+    n_delays,
+    n_loss=n_loss,
+    bully=True,
+    unreliable=True
+)
 print("Analysis completed!\n\n")
 plt.show()
 
@@ -327,15 +528,50 @@ def n_nodes_sim(max_n_nodes, bully = True, unreliable = False):
     for i in range(3, max_n_nodes):
         name = f"Bully" if bully else f"Ring"
         if bully and not unreliable:
-            stats = set_stats(1, DELAY, i, name, unreliable, round(LOSS, 2), DELAY_Q_R)
+            stats = set_stats(
+                1,
+                DELAY,
+                i,
+                name,
+                unreliable,
+                round(LOSS, 2),
+                DELAY_Q_R
+            )
         else:
-            stats = set_stats(1, DELAY, i, name, unreliable, round(LOSS, 2), DELAY_Q)
+            stats = set_stats(
+                1,
+                DELAY,
+                i,
+                name,
+                unreliable,
+                round(LOSS, 2),
+                DELAY_Q
+            )
         ids.append(stats.id)
 
         if bully:
-            bully_sim(stats, i, DELAY, 1, N_SIM, unreliable,round(LOSS, 2), DELAY_Q, DELAY_Q_R)
+            bully_sim(
+                stats,
+                i,
+                DELAY,
+                1,
+                N_SIM,
+                unreliable,
+                round(LOSS, 2),
+                DELAY_Q,
+                DELAY_Q_R
+            )
         else:
-            ring_sim(stats, i, DELAY, 1, N_SIM, unreliable, round(LOSS, 2), DELAY_Q)
+            ring_sim(
+                stats,
+                i,
+                DELAY,
+                1,
+                N_SIM,
+                unreliable,
+                round(LOSS, 2),
+                DELAY_Q
+            )
         print(f"Completed simulation with #nodes = {i}\n")
 
     sim_manager.n_nodes_cmp(ids)
@@ -364,17 +600,33 @@ print("Analysis completed!\n\n")
 # This function compare the mean of the number of messages and the turnaround 
 # time mean of the reliable Bully algorithm for different timeouts quantile 
 def bully_timeout_analysis():
-
-    timeouts = np.round(np.arange(0.8, 1.0, 0.01), 2).tolist()      # generate timeouts quantiles from 0.8 to 0.98  
+    # generate timeouts quantiles from 0.8 to 0.98  
+    timeouts = np.round(np.arange(0.8, 1.0, 0.01), 2).tolist()      
     timeouts.sort()
 
-    ids = []            # ids of each pack of simulations in the sim_manager
+    ids = []    # ids of each pack of simulations in the sim_manager
 
     for t in timeouts:
-        # Bully simulation
-        bully_stats = set_stats(INITIATORS, DELAY, N_NODES, "Bully", unreliable=False, loss=LOSS, delay_q=t)
+        bully_stats = set_stats(    # Bully simulation
+            INITIATORS,
+            DELAY,
+            N_NODES,
+            "Bully",
+            unreliable=False,
+            loss=LOSS,
+            delay_q=t)
         ids.append(bully_stats.id)
-        bully_sim(bully_stats, N_NODES, DELAY, INITIATORS, N_SIM, unreliable= False, loss=round(LOSS, 2),delay_q= DELAY_Q, delay_q_r=t)
+        bully_sim(
+            bully_stats,
+            N_NODES,
+            DELAY,
+            INITIATORS,
+            N_SIM,
+            unreliable= False,
+            loss=round(LOSS, 2),
+            delay_q=DELAY_Q,
+            delay_q_r=t
+        )
         print(f"Completed simulation with quantile = {t}\n")
     
     sim_manager.quantile_bully_cmp(ids)

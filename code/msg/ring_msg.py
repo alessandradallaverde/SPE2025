@@ -1,7 +1,9 @@
 # this class represents a message passed during ring algorithm execution
 #    attributes:
-#        type - a string representing the type of the message (coordinator, election, ACK)
-#        transaction_id - (unique) id of the messages coming from the same initiator election
+#        type - a string representing the type of the message
+#        (coordinator, election, ACK)
+#        transaction_id - (unique) id of the messages coming from the same
+#         initiator election
 #        sender - message sender
 #        event - event for the ack 
 class RingMsg():
@@ -14,7 +16,11 @@ class RingMsg():
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, RingMsg):
-            return self.type==__o.type and self.transaction_id==__o.transaction_id and self.sender==__o.sender
+            return (
+                self.type==__o.type and
+                self.transaction_id==__o.transaction_id and
+                self.sender==__o.sender
+            )
         return False
     
     # method to give to the message an ack event to be triggered

@@ -7,7 +7,8 @@ from simpy import Store, core, AnyOf
 # this class represents a node in the bully algorithm execution
 #   attributes:
 #       elected - id of the new coordinator
-#       el_in_progress - true if the node is already participating in the election
+#       el_in_progress - true if the node is already participating in the
+#       election
 #       blocked - true if the node received at least an OK message
 #       missing_ack - list of nodes ids for which the node is waiting an ack
 #       max_wait - max timeout to wait (unreliable)
@@ -29,7 +30,8 @@ class BullyNode(Node):
         self.el_in_progress = False
         self.blocked = False
         self.missing_ack = []
-        #   maximum wait is computed using the quantile given by delay_q (saved as attribute to reduce calls to scipy)
+        # maximum wait is computed using the quantile given by delay_q (saved as
+        # attribute to reduce calls to scipy)
         self.max_wait = max_delay(delay_q, delay_mean)
         # reference to sim_stat class to record all statistics during simulation
         self.sim_stats = sim_stats
@@ -42,15 +44,19 @@ class BullyNode(Node):
     def reliable_send(self, type, dest_id):
         
         if not self.peers[dest_id].crashed:
-            election_msg = BullyMsg(type, self.id)      # create the election message
+            # create the election message
+            election_msg = BullyMsg(type, self.id)  
 
             if self.debug_mode:
-                print(f"Time {self.env.now:.2f}: Node {self.id} sends {type} to node {dest_id}")
+                print(f"Time {self.env.now:.2f}: Node {self.id} sends {type} " +
+                      "to node {dest_id}")
 
             msg_delay = delay(self.delay_mean)
-            self.sim_stats.add_msg(self.sim_id, msg_delay)      # increase message counter
+            # increase message counter
+            self.sim_stats.add_msg(self.sim_id, msg_delay)      
             yield self.env.timeout(msg_delay)
-            yield self.peers[dest_id].queue.put(election_msg)       # send the message
+            # send the message
+            yield self.peers[dest_id].queue.put(election_msg)       
             self.env.process(self.peers[dest_id].reliable_receive())
 
     # method to receive messages with reliable links
@@ -60,43 +66,56 @@ class BullyNode(Node):
         if msg.type == "ELECTION":
             
             if self.debug_mode:
-                if msg.sender_id == -1:     # begin of the election
-                    print(f"\033[94mTime {self.env.now:.2f}: Node {self.id} detected coordinator crash\033[0m")
+                if msg.sender_id == -1: # begin of the election
+                    print(f"\033[94mTime {self.env.now:.2f}: Node {self.id} " +
+                            "detected coordinator crash\033[0m")
                 else:
-                    print(f"Time {self.env.now:.2f}: Node {self.id} receives ELECTION message from node {msg.sender_id}")
+                    print(f"Time {self.env.now:.2f}: Node {self.id} receives " +
+                            "ELECTION message from node {msg.sender_id}")
 
             if self.id > msg.sender_id:
-                if msg.sender_id != -1:     # if id is greater than sender: stop election
+                # if id is greater than sender: stop election
+                if msg.sender_id != -1:     
                     self.env.process(self.reliable_send("OK", msg.sender_id))
                 if not self.el_in_progress:
-                    self.el_in_progress = True          # each node can only start election ONCE   
-                    for i in range(self.id + 1, len(self.peers)):           # send ELECTION messages to all nodes with greater id
+                    self.el_in_progress = True  
+                    # each node can only start election ONCE           
+                    for i in range(self.id + 1, len(self.peers)):  
+                        # send ELECTION messages to all nodes with greater id         
                         self.env.process(self.reliable_send("ELECTION", i))
 
-                    # wait for a certain time to be passed ... if it wasn't stopped it is elected
+                    # wait for a certain time to be passed ...
+                    # if it wasn't stopped it is elected
                     yield self.env.timeout(2 * self.max_wait)
                     if not self.blocked:
                         for i in range(len(self.peers)):
                             self.env.process(
-                                self.reliable_send("COORDINATOR", self.peers[i].id))
+                                self.reliable_send(
+                                    "COORDINATOR",
+                                    self.peers[i].id)
+                                )
     
-                    self.el_in_progress = False         # election of node ended
+                    self.el_in_progress = False # election of node ended
 
         elif msg.type == "OK":
             if self.debug_mode:
-                print(f"Time {self.env.now:.2f}: Node {self.id} receives OK message from node {msg.sender_id}")
+                print(f"Time {self.env.now:.2f}: Node {self.id} receives OK "
+                        "message from node {msg.sender_id}")
 
-            self.blocked = True         # stop election
+            self.blocked = True # stop election
 
         elif msg.type == "COORDINATOR":
             if self.debug_mode:
-                print(f"\033[92mTime {self.env.now:.2f}: Node {self.id} elects {msg.sender_id} as coordinator\033[0m")
+                print(f"\033[92mTime {self.env.now:.2f}: Node {self.id} " +
+                        "elects {msg.sender_id} as coordinator\033[0m")
             
             self.elected = msg.sender_id
-            self.el_in_progress = False         # if active, set election status of node
-            is_finished, electee = self.finished()          # if election terminated trigger finish event
+            # if active, set election status of node
+            self.el_in_progress = False
+            # if election terminated trigger finish event         
+            is_finished, electee = self.finished()          
             if is_finished:
-                self.finish.succeed(electee)        # set value of event
+                self.finish.succeed(electee)    # set value of event
                 raise core.StopSimulation("")
 
     # method to send messages with unreliable links
@@ -106,19 +125,24 @@ class BullyNode(Node):
     def unreliable_send(self, type, dest_id):
         
         if not self.peers[dest_id].crashed:
-            election_msg = BullyMsg(type, self.id)          # create the election message
+            # create the election message
+            election_msg = BullyMsg(type, self.id)          
             
             if self.debug_mode:
-                print(f"Time {self.env.now:.2f}: Node {self.id} sends {type} to node {dest_id}")
+                print(f"Time {self.env.now:.2f}: Node {self.id} sends {type} " +
+                        " to node {dest_id}")
 
-            msg_delay = delay(self.delay_mean)          
-            self.sim_stats.add_msg(self.sim_id, msg_delay)      # increase message counter
-            if random.uniform(0, 1) > self.loss_rate:       # is packet lost?
+            msg_delay = delay(self.delay_mean)   
+            # increase message counter       
+            self.sim_stats.add_msg(self.sim_id, msg_delay) 
+            if random.uniform(0, 1) > self.loss_rate:   # is packet lost?
                 yield self.env.timeout(msg_delay)
-                yield self.peers[dest_id].queue.put(election_msg)       # send the message
+                # send the message
+                yield self.peers[dest_id].queue.put(election_msg)       
                 self.env.process(self.peers[dest_id].unreliable_receive())
             elif self.debug_mode:
-                print(f"\033[31mTime {self.env.now:.2f}: Lost {type} message from node {self.id} to node {dest_id}\033[0m")
+                print(f"\033[31mTime {self.env.now:.2f}: Lost {type} message " +
+                      "from node {self.id} to node {dest_id}\033[0m")
 
     # method to receive messages with unreliable links
     def unreliable_receive(self):
@@ -128,26 +152,34 @@ class BullyNode(Node):
         if msg.type == "ELECTION":
             if self.debug_mode:
                 if msg.sender_id == -1:         # begin of the election
-                    print(f"\033[94mTime {self.env.now:.2f}: Node {self.id} detected coordinator crash\033[0m")
+                    print(f"\033[94mTime {self.env.now:.2f}: Node {self.id} " +
+                          "detected coordinator crash\033[0m")
                 else:
-                    print(f"Time {self.env.now:.2f}: Node {self.id} receives ELECTION message from node {msg.sender_id}")
+                    print(f"Time {self.env.now:.2f}: Node {self.id} receives " +
+                          "ELECTION message from node {msg.sender_id}")
 
-            if self.id > msg.sender_id:     
-                if msg.sender_id != -1:     # if id is greater than sender: stop election
+            if self.id > msg.sender_id:   
+                # if id is greater than sender: stop election  
+                if msg.sender_id != -1:     
                     self.env.process(self.unreliable_send("OK", msg.sender_id))
 
-                # OPTIMIZATION: don't even start election if you already know of a node with higher ID
+                # OPTIMIZATION: don't even start election if you already know of
+                # a node with higher ID
                 if (not self.el_in_progress) and self.max_active_id <= self.id:
-                    # each node can only start election ONCE (retransmissions are not counted)
+                    # each node can only start election ONCE (retransmissions
+                    # are not counted)
                     self.el_in_progress = True
                     # send ELECTION messages to all nodes with greater id
                     self.missing_ack = []
-                    self.missing_ack.extend(range(self.id + 1, len(self.peers) - 1))
+                    self.missing_ack.extend(
+                        range(self.id + 1, len(self.peers) - 1)
+                    )
                     yield self.env.process(self.retransmit("ELECTION"))
                     
                     if not self.blocked:
                         # no OK received: this node is the one with highest id
-                        # prepare to wait for all nodes to send ACK of COORDINATOR message
+                        # prepare to wait for all nodes to send ACK of
+                        # COORDINATOR message
                         self.missing_ack = []
                         self.missing_ack.extend(range(0, len(self.peers) - 1))
                         # do not send COORDINATOR message to self
@@ -162,25 +194,29 @@ class BullyNode(Node):
 
         elif msg.type == "OK":
             if self.debug_mode:
-                print(f"Time {self.env.now:.2f}: Node {self.id} receives OK message from node {msg.sender_id}")
+                print(f"Time {self.env.now:.2f}: Node {self.id} receives OK " +
+                      "message from node {msg.sender_id}")
             
             self.update_ack_list(msg.sender_id)
-            self.blocked = True         # stop election
+            self.blocked = True # stop election
 
         elif msg.type == "ACK":
             if self.debug_mode:
-                print(f"Time {self.env.now:.2f}: Node {self.id} receives ACK message from node {msg.sender_id}")
+                print(f"Time {self.env.now:.2f}: Node {self.id} receives ACK " +
+                      "message from node {msg.sender_id}")
             
             self.update_ack_list(msg.sender_id)
 
         elif msg.type == "COORDINATOR":
             if self.debug_mode:
-                print(f"\033[92mTime {self.env.now:.2f}: Node {self.id} elects {msg.sender_id} as coordinator\033[0m")
+                print(f"\033[92mTime {self.env.now:.2f}: Node {self.id} " +
+                      "elects {msg.sender_id} as coordinator\033[0m")
             
-            self.env.process(self.unreliable_send("ACK", msg.sender_id))        # send ACK
+            # send ACK
+            self.env.process(self.unreliable_send("ACK", msg.sender_id))        
             self.elected = msg.sender_id
             
-            self.el_in_progress = False         # if active, set election status of node
+            self.el_in_progress = False # if active, set election status of node
 
     # method to udpate ack list counter and trigger appropriate event when all 
     # answers arrived
@@ -188,33 +224,40 @@ class BullyNode(Node):
     #       sender - message sender
     def update_ack_list(self, sender): 
         
-        if sender in self.missing_ack:      # remove the node from missing_ack list
+        # remove the node from missing_ack list
+        if sender in self.missing_ack:      
             self.missing_ack.remove(sender)
 
         if len(self.missing_ack) == 0 and not self.wait_msg.triggered:
-            self.wait_msg.succeed()     # trigger event
+            self.wait_msg.succeed() # trigger event
     
-    # method to send message that will be retransmitted if not all answers are received
+    # method to send message that will be retransmitted if not all answers are
+    # received
     #   params:
     #       msg_type - message type
     def retransmit(self, msg_type):
         self.wait_msg = self.env.event()
         # OPTIMIZATION
-        # If while retransmitting a message you discover a node of higher ID quit
+        # If while retransmitting a message you discover a node of higher ID
+        # quit
         while len(self.missing_ack) != 0 and not self.blocked:
             for n_id in self.missing_ack:
                 self.env.process(self.unreliable_send(msg_type, n_id))
             # set timeout /wait for answers
-            yield AnyOf(self.env, [self.wait_msg, self.env.timeout(2 * self.max_wait)])
+            yield AnyOf(
+                self.env,
+                [self.wait_msg, self.env.timeout(2 * self.max_wait)]
+            )
 
     # method that return array with two values:
     #   params: 
     #       first - is True if all nodes decided on coordinator
-    #       second - is an integer (-1 = different coordinators, otherwise it indicates the node that was elected)
+    #       second - is an integer (-1 = different coordinators, otherwise it
+    #       indicates the node that was elected)
     def finished(self):
         electee = -2
         for i in range(len(self.peers)):
-            if not self.peers[i].crashed:           # count only non crashed processes
+            if not self.peers[i].crashed:   # count only non crashed processes
                 if self.peers[i].elected == -1:  
                     return [False, -1]
                 else:
